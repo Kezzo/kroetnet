@@ -18,7 +18,7 @@ export class Player {
       "playerId": this.id,
       "xPosition": this.posX,
       "zPosition": this.posY,
-      "sequence": 0
+      "counter": 0
     }
   }
   up(){

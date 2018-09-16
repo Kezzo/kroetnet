@@ -62,7 +62,7 @@ pubnub.addListener({
     }
   },
   message: function(message) {
-    console.log('MSG', message)
+    // console.log('MSG', message)
     if(message.message.command === 'JOIN'){
       let player = new Player(0,0, message.message.playerId)
       game.addPlayer(player)
@@ -70,9 +70,9 @@ pubnub.addListener({
       const newPosition = game.move(
         message.message.playerId,
         message.message.command,
-        message.message.sequence
+        message.message.counter
       )
-      newPosition.sequence = message.message.sequence
+      newPosition.counter = message.message.counter
       const msg = { "playerPositionUpdates": [ newPosition ] }
       publishMsg(msg)
     }
