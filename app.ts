@@ -71,6 +71,8 @@ pubnub.addListener({
         message.message.playerId,
         message.message.command
       )
+      console.log(newPosition, typeof(newPosition))
+      newPosition.counter = message.message.counter
       const msg = { "playerPositionUpdates": [ newPosition ] }
       publishMsg(msg)
     }

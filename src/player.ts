@@ -11,7 +11,12 @@ export class Player {
     this.id = playerId;
   }
   private newPositon(){
-    return {"playerId": this.id, "xPosition": this.posX, "zPosition": this.posY}
+    return {
+      "playerId": this.id,
+      "xPosition": this.posX,
+      "zPosition": this.posY,
+      "counter": 0
+    }
   }
   up(){
     if(this.posY + 1 <= 24){
