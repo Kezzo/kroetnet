@@ -5,17 +5,20 @@ export class Player {
   posX: number;
   posY: number;
   id: string;
+  lastSeq: number;
+
   constructor(positionX: number, positionY: number, playerId: string){
     this.posX = positionX;
     this.posY = positionY;
     this.id = playerId;
+    this.lastSeq = 0;
   }
   private newPositon(){
     return {
       "playerId": this.id,
       "xPosition": this.posX,
       "zPosition": this.posY,
-      "counter": 0
+      "sequence": 0
     }
   }
   up(){

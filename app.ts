@@ -69,10 +69,10 @@ pubnub.addListener({
     } else if(['DOWN', 'UP','LEFT', 'RIGHT'].indexOf(message.message.command) > -1){
       const newPosition = game.move(
         message.message.playerId,
-        message.message.command
+        message.message.command,
+        message.message.sequence
       )
-      console.log(newPosition, typeof(newPosition))
-      newPosition.counter = message.message.counter
+      newPosition.sequence = message.message.sequence
       const msg = { "playerPositionUpdates": [ newPosition ] }
       publishMsg(msg)
     }
