@@ -1,9 +1,10 @@
 import PubNub = require('pubnub')
 import fs = require('fs')
-import { Player } from './src/player'
-import { Game } from './src/game'
+import path = require('path')
+import { Player } from './player'
+import { Game } from './game'
 
-const pubnubConfigs = JSON.parse(fs.readFileSync('./pubnub-config.json', 'utf-8'))
+const pubnubConfigs = JSON.parse(fs.readFileSync(path.join(__dirname + '/../pubnub-config.json'), 'utf-8'))
 const pubnub = new PubNub({
   subscribeKey: pubnubConfigs.subscribeKey,
   publishKey: pubnubConfigs.publishKey,
@@ -48,17 +49,7 @@ let game = new Game()
 pubnub.addListener({
   status: function(statusEvent) {
     if (statusEvent.category === "PNConnectedCategory") {
-      var payload = {
-        my: 'payload'
-      };
-      pubnub.publish(
-        {
-          message: payload
-        },
-        function (status) {
-          console.log('Status: ', status)
-        }
-      );
+      console.log('Connected!');
     }
   },
   message: function(message) {
@@ -70,9 +61,9 @@ pubnub.addListener({
       const newPosition = game.move(
         message.message.playerId,
         message.message.command,
-        message.message.counter
+        message.message.sequence
       )
-      newPosition.counter = message.message.counter
+      newPosition.sequence = message.message.sequence
       const msg = { "playerPositionUpdates": [ newPosition ] }
       publishMsg(msg)
     }
