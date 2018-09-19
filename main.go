@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	port := ":1337"
+	port := ":2448"
 	fmt.Println("Start listening on port " + port)
 
 	pc, err := net.ListenPacket("udp", port)
