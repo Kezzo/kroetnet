@@ -2,35 +2,40 @@ client packets
 
 - time-synch-request (NTP)
 
+- time-synch-done
+        message-id 8bits
+
 - input (32 bits)
-	message-id 8bits
-	playerId 8bits
-	translation 8bits
-	rotation 8bits
-	frame 8bits
+        message-id 8bits
+        playerId 8bits
+        translation 8bits
+        rotation 8bits
+        frame 8bits
 
 - game-start-init-ack (8bits)
-	message-id 8bits
+        message-id 8bits
 
 - game-end (8 bits)
-	message-id 8bits
+        message-id 8bits
 
 server packets
 
 - time-synch-response (NTP)
 
+- time-synch-done-ack
+        message-id 8bits
+
 - unit-state (88bits)
-	message-id 8bits
-	player-id 8bits
-	x-position 32bits
-	y-position 32bits
-	rotation 8bits
-	frame 8bits
+        message-id 8bits
+        player-id 8bits
+        x-position 32bits
+        y-position 32bits
+        rotation 8bits
+        frame 8bits
 
 - game-start-init (112 bits)
-	message-id 8bits
-	start-timestamp 13 bytes (with ms)
+        message-id 8bits
+        start-timestamp 13 bytes (with ms)
 
 - game-end (8 bits)
-	message-id 8bits
-
+        message-id 8bits
