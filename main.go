@@ -2,12 +2,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/google/gopacket"
-	"github.com/google/gopacket/layers"
-	"github.com/google/gopacket/pcap"
 	"log"
 	"net"
 	"time"
+
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 )
 
 var (
@@ -31,6 +32,8 @@ func main() {
 	defer pc.Close()
 
 	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
+	handleError(err)
+
 	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
 	defer handle.Close()
 
@@ -96,9 +99,9 @@ func sniffPackets(packet gopacket.Packet) {
 		log.Println("Content: ", ntp)
 	}
 
-	// log.Println("Found Layers:")
-	// for _, layer := range packet.Layers() {
-	//   log.Println("- ", layer.LayerType())
-	// }
+	log.Println("Found Layers:")
+	for _, layer := range packet.Layers() {
+		log.Println("- ", layer.LayerType())
+	}
 
 }
