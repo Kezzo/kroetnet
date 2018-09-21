@@ -1,25 +1,41 @@
 package main
 
 import (
-	"encoding/binary"
 	"log"
 	"net"
 	"time"
+
+	"github.com/google/gopacket"
+
+	"github.com/google/gopacket/layers"
 )
 
-func handleNTPReq(pc net.PacketConn, addr net.Addr) {
-	// get seconds and fractional secs since 1900
-	secs, fracs := getNTPSeconds(time.Now())
+func handleNTPReq(pc net.PacketConn, addr net.Addr, req []byte, udp *layers.UDP) {
 
-	// response packet is filled with the seconds and
-	// fractional sec values using Big-Endian
-	rsp := make([]byte, 48)
-	// write seconds (as uint32) in buffer at [40:43]
-	binary.BigEndian.PutUint32(rsp[40:], uint32(secs))
-	// write seconds (as uint32) in buffer at [44:47]
-	binary.BigEndian.PutUint32(rsp[44:], uint32(fracs))
+	log.Println("received ntp packet ", req)
+
+	ntp := layers.NTP{}
+
+	var udpserbuf gopacket.SerializeBuffer = gopacket.NewSerializeBuffer()
+	serset := gopacket.SerializeOptions{}
+	udp.SerializeTo(udpserbuf, serset)
+	ntp.DecodeFromBytes(udpserbuf.Bytes(), nil)
+
+	var ts layers.NTPTimestamp = layers.NTPTimestamp(uint64(time.Now().Unix()))
+	ntp.ReceiveTimestamp = ts
+	ntp.TransmitTimestamp = ts
+
+	log.Println("created ntp packet ", ntp)
+
+	var serbuf gopacket.SerializeBuffer = gopacket.NewSerializeBuffer()
+	ntp.SerializeTo(serbuf, serset)
+
+	resp := serbuf.Bytes()
+
+	log.Println("sending response ntp packet ", resp)
+
 	// send data
-	if _, err := pc.WriteTo(rsp, addr); err != nil {
+	if _, err := pc.WriteTo(resp, addr); err != nil {
 		log.Fatalln("err sending data:", err)
 	}
 }

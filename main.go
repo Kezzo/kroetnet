@@ -46,8 +46,8 @@ func main() {
 			log.Print("Error: ", err)
 			continue
 		}
-		go handleRequest(pc, addr, buf[:n])
-		go sniffPackets(packet)
+
+		go sniffPackets(pc, addr, packet)
 	}
 }
 
@@ -57,11 +57,13 @@ func handleError(err error) {
 	}
 }
 
-func handleRequest(pc net.PacketConn, addr net.Addr, buf []byte) {
+func handleRequest(pc net.PacketConn, addr net.Addr, buf []byte, udp *layers.UDP) {
 	log.Printf("received string: %s from: %s\n\n", string(buf), addr)
+	log.Println("received buffer at 0: ", buf[0])
 	switch buf[0] {
-	case 27:
-		handleNTPReq(pc, addr)
+	case 36:
+		handleNTPReq(pc, addr, buf, udp)
+		break
 	default:
 		serve(pc, addr, buf)
 	}
@@ -73,22 +75,27 @@ func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 	pc.WriteTo(response, addr)
 }
 
-func sniffPackets(packet gopacket.Packet) {
-	// some details about the packet
+func sniffPackets(pc net.PacketConn, addr net.Addr, packet gopacket.Packet) {
+	//some details about the packet
+
 	// ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	// if ipLayer != nil {
-	//   log.Println("IPv4 layer detected.")
-	//   ip, _ := ipLayer.(*layers.IPv4)
-	//   log.Printf("From %s to %s\n", ip.SrcIP, ip.DstIP)
-	//   log.Println("Protocol: ", ip.Protocol)
-	//   log.Println()
+	// 	log.Println("IPv4 layer detected.")
+	// 	ip, _ := ipLayer.(*layers.IPv4)
+	// 	log.Printf("From %s to %s\n", ip.SrcIP, ip.DstIP)
+	// 	log.Println("Protocol: ", ip.Protocol)
+	// 	log.Println()
 	// }
+
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	if udpLayer != nil {
 		log.Println("UDPLayer detected.")
-		log.Printf("%s\n", udpLayer.LayerPayload())
+		buf := udpLayer.LayerPayload()
+		log.Printf("%s\n")
 		udp, _ := udpLayer.(*layers.UDP)
 		log.Println("Content: ", udp)
+
+		handleRequest(pc, addr, buf, udp)
 	}
 
 	ntpLayer := packet.Layer(layers.LayerTypeNTP)
