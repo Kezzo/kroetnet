@@ -2,39 +2,103 @@ package main
 
 import (
 	"fmt"
+	"github.com/google/gopacket"
+	"github.com/google/gopacket/layers"
+	"github.com/google/gopacket/pcap"
 	"log"
 	"net"
+	"time"
+)
+
+var (
+	device            = "lo0"
+	snapshotLen int32 = 1024
+	promiscuous       = false
+	err         error
+	timeout     = 30 * time.Second
+	handle      *pcap.Handle
 )
 
 func main() {
+
 	port := ":2448"
-	fmt.Println("Start listening on port " + port)
+	network := "udp"
 
-	pc, err := net.ListenPacket("udp", port)
+	pc, err := net.ListenPacket(network, port)
+	handleError(err)
 
-	if err != nil {
-		log.Fatal(err)
-		return
-	}
-
+	fmt.Printf("listening on (%s)%s\n", network, pc.LocalAddr())
 	defer pc.Close()
 
-	for {
+	handle, err = pcap.OpenLive(device, snapshotLen, promiscuous, timeout)
+	packetSource := gopacket.NewPacketSource(handle, handle.LinkType())
+	defer handle.Close()
+
+	for packet := range packetSource.Packets() {
 		buf := make([]byte, 1024)
 		n, addr, err := pc.ReadFrom(buf)
+		fmt.Printf("\nBuffer Content: [ % x ] \n", buf[:n])
 
 		if err != nil {
 			log.Print("Error: ", err)
 			continue
 		}
-
-		log.Println("Received: ", buf)
-
-		go serve(pc, addr, buf[:n])
+		go handleRequest(pc, addr, buf[:n])
+		go sniffPackets(packet)
 	}
 }
 
+func handleError(err error) {
+	if err != nil {
+		log.Fatalln("Error: ", err)
+	}
+}
+
+func handleRequest(pc net.PacketConn, addr net.Addr, buf []byte) {
+	log.Printf("received string: %s from: %s\n\n", string(buf), addr)
+	switch buf[0] {
+	case 27:
+		handleNPCReq(pc, addr)
+	default:
+		serve(pc, addr, buf)
+	}
+
+}
+
 func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
-	buf[2] |= 0x80
-	pc.WriteTo(buf, addr)
+	response := []byte("Received your msg: " + string(buf))
+	pc.WriteTo(response, addr)
+}
+
+func sniffPackets(packet gopacket.Packet) {
+	// some details about the packet
+	// ipLayer := packet.Layer(layers.LayerTypeIPv4)
+	// if ipLayer != nil {
+	//   log.Println("IPv4 layer detected.")
+	//   ip, _ := ipLayer.(*layers.IPv4)
+	//   log.Printf("From %s to %s\n", ip.SrcIP, ip.DstIP)
+	//   log.Println("Protocol: ", ip.Protocol)
+	//   log.Println()
+	// }
+	udpLayer := packet.Layer(layers.LayerTypeUDP)
+	if udpLayer != nil {
+		log.Println("UDPLayer detected.")
+		log.Printf("%s\n", udpLayer.LayerPayload())
+		udp, _ := udpLayer.(*layers.UDP)
+		log.Println("Content: ", udp)
+	}
+
+	ntpLayer := packet.Layer(layers.LayerTypeNTP)
+	if ntpLayer != nil {
+		log.Println("NTP Layer detected.")
+		log.Printf("%s\n", ntpLayer.LayerPayload())
+		ntp, _ := ntpLayer.(*layers.NTP)
+		log.Println("Content: ", ntp)
+	}
+
+	// log.Println("Found Layers:")
+	// for _, layer := range packet.Layers() {
+	//   log.Println("- ", layer.LayerType())
+	// }
+
 }
