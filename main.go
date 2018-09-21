@@ -61,7 +61,7 @@ func handleRequest(pc net.PacketConn, addr net.Addr, buf []byte) {
 	log.Printf("received string: %s from: %s\n\n", string(buf), addr)
 	switch buf[0] {
 	case 27:
-		handleNPCReq(pc, addr)
+		handleNTPReq(pc, addr)
 	default:
 		serve(pc, addr, buf)
 	}

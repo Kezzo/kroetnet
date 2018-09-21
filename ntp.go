@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func handleNPCReq(pc net.PacketConn, addr net.Addr) {
+func handleNTPReq(pc net.PacketConn, addr net.Addr) {
 	// get seconds and fractional secs since 1900
 	secs, fracs := getNTPSeconds(time.Now())
 
