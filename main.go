@@ -61,7 +61,7 @@ func handleRequest(pc net.PacketConn, addr net.Addr, buf []byte, udp *layers.UDP
 	log.Printf("received string: %s from: %s\n\n", string(buf), addr)
 	log.Println("received buffer at 0: ", buf[0])
 	switch buf[0] {
-	case 36:
+	case 35:
 		handleNTPReq(pc, addr, buf, udp)
 		break
 	default:
@@ -78,14 +78,14 @@ func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 func sniffPackets(pc net.PacketConn, addr net.Addr, packet gopacket.Packet) {
 	//some details about the packet
 
-	// ipLayer := packet.Layer(layers.LayerTypeIPv4)
-	// if ipLayer != nil {
-	// 	log.Println("IPv4 layer detected.")
-	// 	ip, _ := ipLayer.(*layers.IPv4)
-	// 	log.Printf("From %s to %s\n", ip.SrcIP, ip.DstIP)
-	// 	log.Println("Protocol: ", ip.Protocol)
-	// 	log.Println()
-	// }
+	ipLayer := packet.Layer(layers.LayerTypeIPv4)
+	if ipLayer != nil {
+		log.Println("IPv4 layer detected.")
+		ip, _ := ipLayer.(*layers.IPv4)
+		log.Printf("From %s to %s\n", ip.SrcIP, ip.DstIP)
+		log.Println("Protocol: ", ip.Protocol)
+		log.Println()
+	}
 
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 	if udpLayer != nil {

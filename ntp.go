@@ -19,7 +19,9 @@ func handleNTPReq(pc net.PacketConn, addr net.Addr, req []byte, udp *layers.UDP)
 	var udpserbuf gopacket.SerializeBuffer = gopacket.NewSerializeBuffer()
 	serset := gopacket.SerializeOptions{}
 	udp.SerializeTo(udpserbuf, serset)
-	ntp.DecodeFromBytes(udpserbuf.Bytes(), nil)
+
+	log.Println("udp buffer ", udpserbuf.Bytes())
+	ntp.DecodeFromBytes(req, nil)
 
 	var ts layers.NTPTimestamp = layers.NTPTimestamp(uint64(time.Now().Unix()))
 	ntp.ReceiveTimestamp = ts
