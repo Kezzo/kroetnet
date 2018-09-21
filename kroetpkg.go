@@ -15,11 +15,6 @@ type KroetPkg struct {
 	Frame string
 }
 
-// KroetPkgs Interface
-type KroetPkgs interface {
-	Encode() []byte
-}
-
 // Encode transforms struct into byte array
 func (p KroetPkg) Encode() []byte {
 	buf := &bytes.Buffer{}
