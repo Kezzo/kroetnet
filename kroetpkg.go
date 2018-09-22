@@ -6,13 +6,13 @@ import (
 	"log"
 )
 
-// KroetPkg Payload for commnication
+// KroetPkg Payload for incoming commnication
 type KroetPkg struct {
 	MessageID,
 	PlayerID,
 	Translation,
 	Rotation,
-	Frame string
+	Frame interface{}
 }
 
 // Encode transforms struct into byte array
