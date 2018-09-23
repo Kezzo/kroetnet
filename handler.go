@@ -21,9 +21,11 @@ func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 
 func handleNTPReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime time.Time) {
 	rsp := buf
-	binary.LittleEndian.PutUint64(rsp[8:], uint64(recvTime.Unix()))
-	sendTime := time.Now().Unix()
-	binary.LittleEndian.PutUint64(rsp[16:], uint64(sendTime))
+	rsp[0] = 2
+	// nano seconcs / 100 == ticks
+	binary.LittleEndian.PutUint64(rsp[9:], uint64(recvTime.UnixNano()/100))
+	sendTime := time.Now().UnixNano() / 100
+	binary.LittleEndian.PutUint64(rsp[17:], uint64(sendTime))
 	// send data
 	reponseClient(pc, addr, rsp)
 }
