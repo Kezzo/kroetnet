@@ -1,9 +1,6 @@
-FROM golang:alpine
+FROM scratch
 
-WORKDIR /go/src/kroetnet
-COPY . .
-
-RUN go install -v ./...
+ADD main ./
 
 EXPOSE 2448:2448/udp
-CMD ["kroetnet"]
+CMD ["/main"]
