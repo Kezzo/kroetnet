@@ -43,9 +43,12 @@ func digestRequest(pc net.PacketConn, addr net.Addr, buf []byte) {
 	log.Println("received buffer", buf)
 	msgID := buf[0]
 	switch msgID {
-	case 1:
-		handleNTPReq(pc, addr, buf, recvTime)
-	case 2:
+	case MSG_PING_REQ:
+		buf[0] = MSG_PING_RESP
+		serve(pc, addr, buf)
+	case MSG_TIME_REQ:
+		handleTimeSynchReq(pc, addr, buf, recvTime)
+	case MSG_INPUT:
 		handleKroetPkg(pc, addr, buf)
 	default:
 		serve(pc, addr, buf)

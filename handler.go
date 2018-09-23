@@ -19,9 +19,9 @@ func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 	reponseClient(pc, addr, response)
 }
 
-func handleNTPReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime time.Time) {
+func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime time.Time) {
 	rsp := buf
-	rsp[0] = 2
+	rsp[0] = MSG_TIME_RESP
 	// nano seconcs / 100 == ticks
 	binary.LittleEndian.PutUint64(rsp[9:], uint64(recvTime.UnixNano()/100))
 	sendTime := time.Now().UnixNano() / 100
