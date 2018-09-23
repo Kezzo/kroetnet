@@ -6,6 +6,7 @@ client packets
 
 - time-synch-done
         message-id 8bits
+        player-id 8bits
 
 - input (32 bits)
         message-id 8bits
@@ -14,7 +15,7 @@ client packets
         rotation 8bits
         frame 8bits
 
-- match-start-init-ack (8bits)
+- match-start-ack (8bits)
         message-id 8bits
         player-id 8bits
 
@@ -41,7 +42,7 @@ server packets
         rotation 8bits
         frame 8bits
 
-- match-start-init (72 bits)
+- match-start (72 bits)
         message-id 8bits
         start-timestamp 64bits (with ms)
 

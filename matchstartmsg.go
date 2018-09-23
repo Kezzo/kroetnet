@@ -6,35 +6,32 @@ import (
 	"log"
 )
 
-// KroetPkg Payload for incoming commnication
-type KroetPkg struct {
+// MatchStartMsg Payload for incoming commnication
+type MatchStartMsg struct {
 	MessageID,
-	PlayerID,
-	Translation,
-	Rotation,
-	Frame interface{}
+	MatchStartTimestamp interface{}
 }
 
 // Encode transforms struct into byte array
-func (p KroetPkg) Encode() []byte {
+func (m MatchStartMsg) Encode() []byte {
 	buf := &bytes.Buffer{}
 	enc := gob.NewEncoder(buf)
-	err := enc.Encode(p)
+	err := enc.Encode(m)
 	if err != nil {
 		log.Fatal("Encoding Pkg error: ", err)
 	}
 	return buf.Bytes()
 }
 
-// DecodeKroetPkg transforms a byte array into a KroetPkg
-func DecodeKroetPkg(buffer []byte) KroetPkg {
+// DecodeMatchStartMsg transforms a byte array into a MatchStartMsg
+func DecodeMatchStartMsg(buffer []byte) MatchStartMsg {
 	buf := &bytes.Buffer{}
 	buf.Write(buffer)
-	var pkg KroetPkg
+	var msg MatchStartMsg
 	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&pkg)
+	err := dec.Decode(&msg)
 	if err != nil {
 		log.Fatal("Decoding Pkg error: ", err)
 	}
-	return pkg
+	return msg
 }

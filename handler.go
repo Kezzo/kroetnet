@@ -20,19 +20,22 @@ func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 }
 
 func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime time.Time) {
-	rsp := make([]byte, 25)
-	rsp[0] = MSG_TIME_RESP
-	copy(rsp[1:], buf[1:])
+	timeResp := TimeSyncRespMsg{
+		MessageID:                   timeRespMsgID,
+		TransmissionTimestamp:       binary.LittleEndian.Uint64(buf[1:]),
+		ServerReceptionTimestamp:    recvTime.UnixNano() / 100,
+		ServerTransmissionTimestamp: time.Now().UnixNano() / 100}
+
 	// nano seconcs / 100 == ticks
-	binary.LittleEndian.PutUint64(rsp[9:], uint64(recvTime.UnixNano()/100))
-	sendTime := time.Now().UnixNano() / 100
-	binary.LittleEndian.PutUint64(rsp[17:], uint64(sendTime))
+
+	rsp := timeResp.Encode()
+
 	// send data
 	reponseClient(pc, addr, rsp)
 }
 
-func handleKroetPkg(pc net.PacketConn, addr net.Addr, buf []byte) {
-	kroetpkg := KroetPkg{
+func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
+	inputmsg := InputMsg{
 		MessageID:   binary.LittleEndian.Uint64(buf[0:1]),
 		PlayerID:    binary.LittleEndian.Uint64(buf[1:2]),
 		Translation: binary.LittleEndian.Uint64(buf[2:6]),
@@ -40,8 +43,8 @@ func handleKroetPkg(pc net.PacketConn, addr net.Addr, buf []byte) {
 		Frame:       binary.LittleEndian.Uint64(buf[10:11])}
 
 	// validate moves
-	log.Println("Pkg Received: ", kroetpkg)
-	rsp := kroetpkg.Encode()
+	log.Println("Pkg Received: ", inputmsg)
+	rsp := inputmsg.Encode()
 	// response with position (X,Y)
 	reponseClient(pc, addr, rsp)
 }
