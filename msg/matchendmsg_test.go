@@ -1,4 +1,4 @@
-package main
+package msg
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 func TestMatchEndMsgEncodeDecode(t *testing.T) {
 
-	matchendmsg := MatchEndMsg{matchEndMsgID}
+	matchendmsg := MatchEndMsg{MatchEndMsgID}
 	encoded := matchendmsg.Encode()
 	decoded := DecodeMatchEndMsg(encoded)
 	if matchendmsg != decoded {

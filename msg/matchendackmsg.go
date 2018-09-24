@@ -1,8 +1,6 @@
-package main
+package msg
 
-import (
-	"encoding/binary"
-)
+import "encoding/binary"
 
 // MatchEndAckMsg Payload for incoming commnication
 type MatchEndAckMsg struct {

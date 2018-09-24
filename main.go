@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"kroetnet/msg"
 	"log"
 	"net"
 	"time"
@@ -43,12 +44,12 @@ func digestRequest(pc net.PacketConn, addr net.Addr, buf []byte) {
 	log.Println("received buffer", buf)
 	msgID := buf[0]
 	switch msgID {
-	case pingReqMsgID:
-		buf[0] = pingRespMsgID
+	case msg.PingReqMsgID:
+		buf[0] = msg.PingRespMsgID
 		serve(pc, addr, buf)
-	case timeReqMsgID:
+	case msg.TimeReqMsgID:
 		handleTimeSynchReq(pc, addr, buf, recvTime)
-	case inputMsgID:
+	case msg.InputMsgID:
 		handleInputMsg(pc, addr, buf)
 	default:
 		serve(pc, addr, buf)

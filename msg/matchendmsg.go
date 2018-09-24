@@ -1,4 +1,4 @@
-package main
+package msg
 
 // MatchEndMsg Payload for incoming commnication
 type MatchEndMsg struct {

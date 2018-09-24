@@ -1,4 +1,4 @@
-package main
+package msg
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 func TestTimeSyncDoneMsgEncodeDecode(t *testing.T) {
 
-	timesyncdonemsg := TimeSyncDoneMsg{timeSyncDoneMsgID, 10}
+	timesyncdonemsg := TimeSyncDoneMsg{TimeSyncDoneMsgID, 10}
 	encoded := timesyncdonemsg.Encode()
 	decoded := DecodeTimeSyncDoneMsg(encoded)
 	if timesyncdonemsg != decoded {

@@ -1,5 +1,3 @@
-node_modules/
-compiled-src/
-pubnub-config.json
+main
 *.DS_Store
 .vscode

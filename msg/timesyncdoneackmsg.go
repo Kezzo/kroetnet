@@ -1,4 +1,4 @@
-package main
+package msg
 
 // TimeSyncDoneAckMsg Payload for incoming commnication
 type TimeSyncDoneAckMsg struct {

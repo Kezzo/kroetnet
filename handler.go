@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"kroetnet/msg"
 	"log"
 	"net"
 	"time"
@@ -20,8 +21,8 @@ func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 }
 
 func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime time.Time) {
-	timeResp := TimeSyncRespMsg{
-		MessageID:                   timeRespMsgID,
+	timeResp := msg.TimeSyncRespMsg{
+		MessageID:                   msg.TimeRespMsgID,
 		TransmissionTimestamp:       binary.LittleEndian.Uint64(buf[1:]),
 		ServerReceptionTimestamp:    uint64(recvTime.UnixNano() / 100),
 		ServerTransmissionTimestamp: uint64(time.Now().UnixNano() / 100)}
@@ -35,7 +36,7 @@ func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime t
 }
 
 func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
-	inputmsg := InputMsg{
+	inputmsg := msg.InputMsg{
 		MessageID:   buf[0],
 		PlayerID:    binary.LittleEndian.Uint64(buf[1:2]),
 		Translation: binary.LittleEndian.Uint64(buf[2:6]),

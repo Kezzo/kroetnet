@@ -1,4 +1,4 @@
-package main
+package msg
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 
 func TestInputMsgEncodeDecode(t *testing.T) {
 
-	inputmsg := InputMsg{inputMsgID, 125, 200, 100, 10}
+	inputmsg := InputMsg{InputMsgID, 125, 200, 100, 10}
 	encoded := inputmsg.Encode()
 	decoded := DecodeInputMsg(encoded)
 	if inputmsg != decoded {

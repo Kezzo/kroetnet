@@ -1,8 +1,6 @@
-package main
+package msg
 
-import (
-	"encoding/binary"
-)
+import "encoding/binary"
 
 // TimeSyncDoneMsg Payload for incoming commnication
 type TimeSyncDoneMsg struct {
