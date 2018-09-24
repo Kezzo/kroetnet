@@ -40,7 +40,6 @@ func handleError(err error) {
 
 func digestRequest(pc net.PacketConn, addr net.Addr, buf []byte) {
 	recvTime := time.Now()
-	// log.Printf("received string: %s from: %s\n\n", string(buf), addr)
 	log.Println("received buffer", buf)
 	msgID := buf[0]
 	switch msgID {

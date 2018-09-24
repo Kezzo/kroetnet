@@ -16,11 +16,12 @@ func reponseClient(pc net.PacketConn, addr net.Addr, buf []byte) {
 }
 
 func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
-	response := []byte("Received your msg: " + string(buf))
+	response := []byte("Alive!")
 	reponseClient(pc, addr, response)
 }
 
-func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime time.Time) {
+func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte,
+	recvTime time.Time) {
 	timeResp := msg.TimeSyncRespMsg{
 		MessageID:                   msg.TimeRespMsgID,
 		TransmissionTimestamp:       binary.LittleEndian.Uint64(buf[1:]),
@@ -28,9 +29,7 @@ func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime t
 		ServerTransmissionTimestamp: uint64(time.Now().UnixNano() / 100)}
 
 	// nano seconcs / 100 == ticks
-
 	rsp := timeResp.Encode()
-
 	// send data
 	reponseClient(pc, addr, rsp)
 }
