@@ -1,40 +1,36 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
-	"log"
+	"encoding/binary"
 )
 
 // InputMsg Payload for incoming commnication
 type InputMsg struct {
-	MessageID,
+	MessageID byte
 	PlayerID,
 	Translation,
 	Rotation,
-	Frame interface{}
+	Frame uint64
 }
 
 // Encode transforms struct into byte array
 func (m InputMsg) Encode() []byte {
-	buf := &bytes.Buffer{}
-	enc := gob.NewEncoder(buf)
-	err := enc.Encode(m)
-	if err != nil {
-		log.Fatal("Encoding Pkg error: ", err)
-	}
-	return buf.Bytes()
+	buf := make([]byte, 33)
+	buf[0] = m.MessageID
+	binary.BigEndian.PutUint64(buf[1:], m.PlayerID)
+	binary.BigEndian.PutUint64(buf[9:], m.Translation)
+	binary.BigEndian.PutUint64(buf[17:], m.Rotation)
+	binary.BigEndian.PutUint64(buf[25:], m.Frame)
+	return buf
 }
 
 // DecodeInputMsg transforms a byte array into a InputMsg
-func DecodeInputMsg(buffer []byte) InputMsg {
-	buf := &bytes.Buffer{}
-	buf.Write(buffer)
-	var msg InputMsg
-	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&msg)
-	if err != nil {
-		log.Fatal("Decoding Pkg error: ", err)
-	}
-	return msg
+func DecodeInputMsg(buf []byte) InputMsg {
+	inputmsg := InputMsg{
+		MessageID:   buf[0],
+		PlayerID:    binary.BigEndian.Uint64(buf[1:9]),
+		Translation: binary.BigEndian.Uint64(buf[9:17]),
+		Rotation:    binary.BigEndian.Uint64(buf[17:25]),
+		Frame:       binary.BigEndian.Uint64(buf[25:])}
+	return inputmsg
 }

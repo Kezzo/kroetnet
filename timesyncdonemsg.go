@@ -1,37 +1,27 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
-	"log"
+	"encoding/binary"
 )
 
 // TimeSyncDoneMsg Payload for incoming commnication
 type TimeSyncDoneMsg struct {
-	MessageID,
-	PlayerID interface{}
+	MessageID byte
+	PlayerID  uint64
 }
 
 // Encode transforms struct into byte array
 func (m TimeSyncDoneMsg) Encode() []byte {
-	buf := &bytes.Buffer{}
-	enc := gob.NewEncoder(buf)
-	err := enc.Encode(m)
-	if err != nil {
-		log.Fatal("Encoding Pkg error: ", err)
-	}
-	return buf.Bytes()
+	buf := make([]byte, 9)
+	buf[0] = m.MessageID
+	binary.BigEndian.PutUint64(buf[1:], m.PlayerID)
+	return buf
 }
 
 // DecodeTimeSyncDoneMsg transforms a byte array into a TimeSyncDoneMsg
-func DecodeTimeSyncDoneMsg(buffer []byte) TimeSyncDoneMsg {
-	buf := &bytes.Buffer{}
-	buf.Write(buffer)
-	var msg TimeSyncDoneMsg
-	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&msg)
-	if err != nil {
-		log.Fatal("Decoding Pkg error: ", err)
-	}
-	return msg
+func DecodeTimeSyncDoneMsg(buf []byte) TimeSyncDoneMsg {
+	timesyncdonemsg := TimeSyncDoneMsg{
+		MessageID: buf[0],
+		PlayerID:  binary.BigEndian.Uint64(buf[1:])}
+	return timesyncdonemsg
 }

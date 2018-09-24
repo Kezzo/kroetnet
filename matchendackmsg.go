@@ -1,37 +1,27 @@
 package main
 
 import (
-	"bytes"
-	"encoding/gob"
-	"log"
+	"encoding/binary"
 )
 
 // MatchEndAckMsg Payload for incoming commnication
 type MatchEndAckMsg struct {
-	MessageID,
-	PlayerID interface{}
+	MessageID byte
+	PlayerID  uint64
 }
 
 // Encode transforms struct into byte array
 func (m MatchEndAckMsg) Encode() []byte {
-	buf := &bytes.Buffer{}
-	enc := gob.NewEncoder(buf)
-	err := enc.Encode(m)
-	if err != nil {
-		log.Fatal("Encoding Pkg error: ", err)
-	}
-	return buf.Bytes()
+	buf := make([]byte, 9)
+	buf[0] = m.MessageID
+	binary.BigEndian.PutUint64(buf[1:], m.PlayerID)
+	return buf
 }
 
 // DecodeMatchEndAckMsg transforms a byte array into a MatchEndAckMsg
-func DecodeMatchEndAckMsg(buffer []byte) MatchEndAckMsg {
-	buf := &bytes.Buffer{}
-	buf.Write(buffer)
-	var msg MatchEndAckMsg
-	dec := gob.NewDecoder(buf)
-	err := dec.Decode(&msg)
-	if err != nil {
-		log.Fatal("Decoding Pkg error: ", err)
-	}
-	return msg
+func DecodeMatchEndAckMsg(buf []byte) MatchEndAckMsg {
+	matchendackmsg := MatchEndAckMsg{
+		MessageID: buf[0],
+		PlayerID:  binary.BigEndian.Uint64(buf[1:9])}
+	return matchendackmsg
 }

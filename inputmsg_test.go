@@ -10,6 +10,6 @@ func TestInputMsgEncodeDecode(t *testing.T) {
 	encoded := inputmsg.Encode()
 	decoded := DecodeInputMsg(encoded)
 	if inputmsg != decoded {
-		t.Errorf("Encoded and Decoded structs are not the same")
+		t.Errorf("Encoded and Decoded InputMsg is not the same")
 	}
 }

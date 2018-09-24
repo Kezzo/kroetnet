@@ -10,6 +10,6 @@ func TestMatchStartMsgEncodeDecode(t *testing.T) {
 	encoded := matchstartmsg.Encode()
 	decoded := DecodeMatchStartMsg(encoded)
 	if matchstartmsg != decoded {
-		t.Errorf("Encoded and Decoded structs are not the same")
+		t.Errorf("Encoded and Decoded MatchStartMsg is not the same")
 	}
 }

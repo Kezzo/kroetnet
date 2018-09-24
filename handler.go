@@ -23,8 +23,8 @@ func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime t
 	timeResp := TimeSyncRespMsg{
 		MessageID:                   timeRespMsgID,
 		TransmissionTimestamp:       binary.LittleEndian.Uint64(buf[1:]),
-		ServerReceptionTimestamp:    recvTime.UnixNano() / 100,
-		ServerTransmissionTimestamp: time.Now().UnixNano() / 100}
+		ServerReceptionTimestamp:    uint64(recvTime.UnixNano() / 100),
+		ServerTransmissionTimestamp: uint64(time.Now().UnixNano() / 100)}
 
 	// nano seconcs / 100 == ticks
 
@@ -36,7 +36,7 @@ func handleTimeSynchReq(pc net.PacketConn, addr net.Addr, buf []byte, recvTime t
 
 func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	inputmsg := InputMsg{
-		MessageID:   binary.LittleEndian.Uint64(buf[0:1]),
+		MessageID:   buf[0],
 		PlayerID:    binary.LittleEndian.Uint64(buf[1:2]),
 		Translation: binary.LittleEndian.Uint64(buf[2:6]),
 		Rotation:    binary.LittleEndian.Uint64(buf[6:10]),

@@ -10,6 +10,6 @@ func TestTimeSyncReqMsgEncodeDecode(t *testing.T) {
 	encoded := timesyncreqmsg.Encode()
 	decoded := DecodeTimeSyncReqMsg(encoded)
 	if timesyncreqmsg != decoded {
-		t.Errorf("Encoded and Decoded structs are not the same")
+		t.Errorf("Encoded and Decoded TimeSyncReqMsg not the same")
 	}
 }
