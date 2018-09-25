@@ -12,7 +12,7 @@ type TimeSyncReqMsg struct {
 func (m TimeSyncReqMsg) Encode() []byte {
 	buf := make([]byte, 9)
 	buf[0] = m.MessageID
-	binary.BigEndian.PutUint64(buf[1:], m.TransmissionTimestamp)
+	binary.LittleEndian.PutUint64(buf[1:], m.TransmissionTimestamp)
 
 	return buf
 }
@@ -21,6 +21,6 @@ func (m TimeSyncReqMsg) Encode() []byte {
 func DecodeTimeSyncReqMsg(buf []byte) TimeSyncReqMsg {
 	timesyncreqmsg := TimeSyncReqMsg{
 		MessageID:             buf[0],
-		TransmissionTimestamp: binary.BigEndian.Uint64(buf[1:9])}
+		TransmissionTimestamp: binary.LittleEndian.Uint64(buf[1:9])}
 	return timesyncreqmsg
 }

@@ -12,7 +12,7 @@ type MatchStartMsg struct {
 func (m MatchStartMsg) Encode() []byte {
 	buf := make([]byte, 9)
 	buf[0] = m.MessageID
-	binary.BigEndian.PutUint64(buf[1:], m.MatchStartTimestamp)
+	binary.LittleEndian.PutUint64(buf[1:], m.MatchStartTimestamp)
 	return buf
 }
 
@@ -20,6 +20,6 @@ func (m MatchStartMsg) Encode() []byte {
 func DecodeMatchStartMsg(buf []byte) MatchStartMsg {
 	matchstartmsg := MatchStartMsg{
 		MessageID:           buf[0],
-		MatchStartTimestamp: binary.BigEndian.Uint64(buf[1:])}
+		MatchStartTimestamp: binary.LittleEndian.Uint64(buf[1:])}
 	return matchstartmsg
 }
