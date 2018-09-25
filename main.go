@@ -28,7 +28,7 @@ func main() {
 			log.Print("Error: ", err)
 			continue
 		}
-		go digestRequest(pc, addr, buf[:n])
+		go digestPacket(pc, addr, buf[:n])
 	}
 }
 
@@ -38,7 +38,7 @@ func handleError(err error) {
 	}
 }
 
-func digestRequest(pc net.PacketConn, addr net.Addr, buf []byte) {
+func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 	recvTime := time.Now()
 	log.Println("received buffer", buf)
 	msgID := buf[0]
