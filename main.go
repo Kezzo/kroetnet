@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-var game = Game{State: 0}
+var game = Game{State: 0, players: make([]Player, 1)}
 
 func main() {
 
@@ -67,11 +67,38 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 		if msgID == msg.TimeReqMsgID {
 			handleTimeReq(pc, addr, buf, recvTime)
 		} else if msgID == msg.TimeSyncDoneMsgID {
-			handleTimeSyncDone(pc, addr, buf)
-			// wait for all players
-			sendGameStart(pc, addr)
-			game.State = 1
-			game.StateChangeTimestamp = time.Now().Unix()
+			playerID := -1
+			nextPlayerID := 0
+			for i := 0; i < len(game.players); i++ {
+				if game.players[i] != emptyPlayer {
+					nextPlayerID = i + 1
+					if game.players[i].ipAddr == addr {
+						playerID = game.players[i].id
+						break
+					}
+				}
+			}
+
+			// player no in match yet & match not full
+			if playerID == -1 && game.players[len(game.players)-1] == emptyPlayer {
+				game.players[nextPlayerID] = Player{id: nextPlayerID, ipAddr: addr}
+				playerID = nextPlayerID
+			}
+
+			// match is full and no player found with that address
+			if playerID == -1 {
+				return
+			}
+
+			handleTimeSyncDone(pc, addr, buf, playerID)
+
+			// match is full
+			if game.players[len(game.players)-1] != emptyPlayer {
+				// wait for all players
+				sendGameStart(pc, addr)
+				game.State = 1
+				game.StateChangeTimestamp = time.Now().Unix()
+			}
 		}
 	case 1:
 		if msgID == msg.MatchStartAckMsgID {

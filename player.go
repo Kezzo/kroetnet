@@ -4,6 +4,8 @@ import "net"
 
 // Player details
 type Player struct {
-	IP net.IP
-	id int
+	ipAddr net.Addr
+	id     int
 }
+
+var emptyPlayer = (Player{})

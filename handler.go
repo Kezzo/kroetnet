@@ -34,14 +34,15 @@ func handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
 	reponseClient(pc, addr, rsp)
 }
 
-func handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte) {
-	timesyncdoneackmsg := msg.TimeSyncDoneAckMsg{MessageID: msg.TimeSyncDoneMsgID}
+func handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte, playerID int) {
+	timesyncdoneackmsg := msg.TimeSyncDoneAckMsg{MessageID: msg.TimeSyncDoneAckMsgID, PlayerID: byte(playerID)}
 	reponseClient(pc, addr, timesyncdoneackmsg.Encode())
 }
 
 func sendGameStart(pc net.PacketConn, addr net.Addr) {
 	matchstart := msg.MatchStartMsg{MessageID: msg.MatchStartMsgID,
-		MatchStartTimestamp: uint64(time.Now().Unix() + 10)}
+		MatchStartTimestamp: uint64(time.Now().UnixNano()/1000000 + 1000)}
+	// ts is in ms and match start in now + 1 second
 	reponseClient(pc, addr, matchstart.Encode())
 }
 
@@ -51,12 +52,7 @@ func sendGameEnd(pc net.PacketConn, addr net.Addr) {
 }
 
 func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
-	inputmsg := msg.InputMsg{
-		MessageID:   buf[0],
-		PlayerID:    binary.LittleEndian.Uint64(buf[1:2]),
-		Translation: binary.LittleEndian.Uint64(buf[2:6]),
-		Rotation:    binary.LittleEndian.Uint64(buf[6:10]),
-		Frame:       binary.LittleEndian.Uint64(buf[10:11])}
+	inputmsg := msg.DecodeInputMsg(buf)
 
 	// validate moves
 	log.Println("Pkg Received: ", inputmsg)
