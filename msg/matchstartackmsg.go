@@ -1,18 +1,16 @@
 package msg
 
-import "encoding/binary"
-
 // MatchStartAckMsg Payload for incoming commnication
 type MatchStartAckMsg struct {
-	MessageID byte
-	PlayerID  uint64
+	MessageID,
+	PlayerID byte
 }
 
 // Encode transforms struct into byte array
 func (m MatchStartAckMsg) Encode() []byte {
 	buf := make([]byte, 9)
 	buf[0] = m.MessageID
-	binary.LittleEndian.PutUint64(buf[1:], m.PlayerID)
+	buf[1] = m.PlayerID
 	return buf
 }
 
@@ -20,6 +18,6 @@ func (m MatchStartAckMsg) Encode() []byte {
 func DecodeMatchStartAckMsg(buf []byte) MatchStartAckMsg {
 	matchstartackmsg := MatchStartAckMsg{
 		MessageID: buf[0],
-		PlayerID:  binary.LittleEndian.Uint64(buf[1:])}
+		PlayerID:  buf[1]}
 	return matchstartackmsg
 }

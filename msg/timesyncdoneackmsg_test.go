@@ -5,8 +5,7 @@ import (
 )
 
 func TestTimeSyncDoneAckMsgEncodeDecode(t *testing.T) {
-
-	timesyncdoneackmsg := TimeSyncDoneAckMsg{TimeSyncDoneAckMsgID}
+	timesyncdoneackmsg := TimeSyncDoneAckMsg{TimeSyncDoneAckMsgID, 10}
 	encoded := timesyncdoneackmsg.Encode()
 	decoded := DecodeTimeSyncDoneAckMsg(encoded)
 	if timesyncdoneackmsg != decoded {

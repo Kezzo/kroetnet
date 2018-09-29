@@ -1,34 +1,36 @@
 package msg
 
-import "encoding/binary"
-
 // InputMsg Payload for incoming commnication
 type InputMsg struct {
-	MessageID byte
+	MessageID,
 	PlayerID,
-	Translation,
+	XTranslation,
+	YTranslation,
 	Rotation,
-	Frame uint64
+	Frame byte
 }
 
 // Encode transforms struct into byte array
 func (m InputMsg) Encode() []byte {
-	buf := make([]byte, 33)
+	buf := make([]byte, 6)
 	buf[0] = m.MessageID
-	binary.LittleEndian.PutUint64(buf[1:], m.PlayerID)
-	binary.LittleEndian.PutUint64(buf[9:], m.Translation)
-	binary.LittleEndian.PutUint64(buf[17:], m.Rotation)
-	binary.LittleEndian.PutUint64(buf[25:], m.Frame)
+	buf[1] = m.PlayerID
+	buf[2] = m.XTranslation
+	buf[3] = m.YTranslation
+	buf[4] = m.Rotation
+	buf[5] = m.Frame
+
 	return buf
 }
 
 // DecodeInputMsg transforms a byte array into a InputMsg
 func DecodeInputMsg(buf []byte) InputMsg {
 	inputmsg := InputMsg{
-		MessageID:   buf[0],
-		PlayerID:    binary.LittleEndian.Uint64(buf[1:9]),
-		Translation: binary.LittleEndian.Uint64(buf[9:17]),
-		Rotation:    binary.LittleEndian.Uint64(buf[17:25]),
-		Frame:       binary.LittleEndian.Uint64(buf[25:])}
+		MessageID:    buf[0],
+		PlayerID:     buf[1],
+		XTranslation: buf[2],
+		YTranslation: buf[3],
+		Rotation:     buf[4],
+		Frame:        buf[5]}
 	return inputmsg
 }
