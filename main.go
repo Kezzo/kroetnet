@@ -28,8 +28,38 @@ func main() {
 			log.Print("Error: ", err)
 			continue
 		}
+		// validate moves every second (30 game frames)
+		if game.State == 2 {
+			doEvery(10*time.Millisecond, pc)
+		}
 		checkStateDuration(pc, addr)
 		go digestPacket(pc, addr, buf[:n])
+	}
+}
+
+func doEvery(d time.Duration, pc net.PacketConn) {
+	for range time.Tick(d) {
+		log.Println("--Validate Player moves--")
+		// validatePlayerBuffers(pc)
+	}
+}
+
+// apply all movements from player buffers and send the new positions
+func validatePlayerBuffers(pc net.PacketConn) {
+	log.Println("Validate Player moves")
+	for i := 0; i < len(game.players); i++ {
+		for _, value := range game.playerBuffers[game.players[i].id] {
+			// apply movements for second
+			log.Println(value)
+			respone := msg.UnitStateMsg{
+				MessageID: msg.UnitStateMsgID,
+				UnitID:    byte(game.players[i].id),
+				XPosition: 10,
+				YPosition: 10,
+				Rotation:  1,
+				Frame:     0}
+			reponseClient(pc, game.players[i].ipAddr, respone.Encode())
+		}
 	}
 }
 
@@ -62,6 +92,7 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 	log.Println("received buffer", buf)
 
 	msgID := buf[0]
+	var emptyPlayer = Player{}
 	switch game.State {
 	case 0:
 		if msgID == msg.TimeReqMsgID {
@@ -78,13 +109,11 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 					}
 				}
 			}
-
 			// player no in match yet & match not full
 			if playerID == -1 && game.players[len(game.players)-1] == emptyPlayer {
 				game.players[nextPlayerID] = Player{id: nextPlayerID, ipAddr: addr}
 				playerID = nextPlayerID
 			}
-
 			// match is full and no player found with that address
 			if playerID == -1 {
 				return

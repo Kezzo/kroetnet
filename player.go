@@ -7,5 +7,3 @@ type Player struct {
 	ipAddr net.Addr
 	id     int
 }
-
-var emptyPlayer = (Player{})

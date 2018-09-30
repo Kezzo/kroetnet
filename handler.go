@@ -53,7 +53,6 @@ func sendGameEnd(pc net.PacketConn, addr net.Addr) {
 
 func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	inputmsg := msg.DecodeInputMsg(buf)
-
 	// validate moves
 	log.Println("Pkg Received: ", inputmsg)
 	rsp := inputmsg.Encode()
