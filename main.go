@@ -29,7 +29,7 @@ func main() {
 			log.Print("Error: ", err)
 			continue
 		}
-		if game.State == 0 {
+		if game.State == 2 {
 			// frame tick every 33 ms
 			doEvery(33*time.Millisecond, incFrame)
 		}
@@ -45,7 +45,7 @@ func doEvery(d time.Duration, f func(time.Time)) {
 }
 
 func incFrame(t time.Time) {
-	log.Printf("Frame updated at %v", t)
+	// log.Printf("Frame updated at %v", t)
 	game.Frame = byte(math.Mod(float64(game.Frame)+1., 30.))
 }
 
