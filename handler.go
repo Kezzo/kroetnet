@@ -5,13 +5,14 @@ import (
 	"kroetnet/msg"
 	"log"
 	"net"
+	"sort"
 	"time"
 )
 
 func reponseClient(pc net.PacketConn, addr net.Addr, buf []byte) {
 	log.Println("Reponse to send: ", buf, " to ", addr)
 	if _, err := pc.WriteTo(buf, addr); err != nil {
-		log.Fatalln("err sending data:", err)
+		log.Fatalln("err sending data for msgID :", buf[0], err)
 	}
 }
 
@@ -53,9 +54,59 @@ func sendGameEnd(pc net.PacketConn, addr net.Addr) {
 
 func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	inputmsg := msg.DecodeInputMsg(buf)
-	// validate moves
 	log.Println("Pkg Received: ", inputmsg)
-	rsp := inputmsg.Encode()
-	// response with position (X,Y)
-	reponseClient(pc, addr, rsp)
+	resp := msg.UnitStateMsg{}
+
+	for k, v := range game.players {
+		if game.players[k].ipAddr == v.ipAddr {
+			// validate and update past moves
+			validateAllStates(v)
+			// validate move
+			newX, newY := v.move(inputmsg)
+			resp = msg.UnitStateMsg{
+				MessageID: msg.UnitStateMsgID,
+				UnitID:    byte(v.id),
+				XPosition: newX,
+				YPosition: newY,
+				Rotation:  v.rotation,
+				Frame:     byte(game.Frame)}
+			q := game.statesMap[v.id]
+			q.Push(&PastState{byte(game.Frame), newX, newY,
+				inputmsg.XTranslation, inputmsg.YTranslation})
+
+			// send old state
+			oldState := q.Pop()
+			oldUnitStateMsg := msg.UnitStateMsg{
+				MessageID: msg.PositionConfirmationMessage,
+				UnitID:    byte(v.id),
+				XPosition: oldState.Xpos,
+				YPosition: oldState.Ypos,
+				Rotation:  0,
+				Frame:     oldState.Frame}
+			reponseClient(pc, addr, oldUnitStateMsg.Encode())
+		}
+	}
+	// unitstate for all players
+	for _, v := range game.players {
+		reponseClient(pc, v.ipAddr, resp.Encode())
+	}
+}
+
+func validateAllStates(v Player) {
+	sort.Slice(game.statesMap[v.id].nodes, func(i, j int) bool {
+		return game.statesMap[v.id].nodes[i].Frame <
+			game.statesMap[v.id].nodes[j].Frame
+	})
+	inpMsgArr := []msg.InputMsg{}
+	for i := 0; i < len(game.statesMap[v.id].nodes)-1; i++ {
+		ps := game.statesMap[v.id].nodes[i]
+		inpMsgArr = append(inpMsgArr,
+			msg.InputMsg{MessageID: 0,
+				PlayerID: byte(v.id), XTranslation: ps.Xtans,
+				YTranslation: ps.Ytrans, Rotation: 0, Frame: ps.Frame})
+
+	}
+	x, y := v.validateMoves(inpMsgArr[:len(inpMsgArr)-2])
+	game.statesMap[v.id].nodes[13].Xpos = x
+	game.statesMap[v.id].nodes[13].Ypos = y
 }

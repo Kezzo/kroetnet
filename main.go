@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"kroetnet/msg"
 	"log"
+	"math"
 	"net"
 	"time"
 )
@@ -28,39 +29,24 @@ func main() {
 			log.Print("Error: ", err)
 			continue
 		}
-		// validate moves every second (30 game frames)
-		if game.State == 2 {
-			doEvery(10*time.Millisecond, pc)
+		if game.State == 0 {
+			// frame tick every 33 ms
+			doEvery(33*time.Millisecond, incFrame)
 		}
 		checkStateDuration(pc, addr)
 		go digestPacket(pc, addr, buf[:n])
 	}
 }
 
-func doEvery(d time.Duration, pc net.PacketConn) {
-	for range time.Tick(d) {
-		log.Println("--Validate Player moves--")
-		// validatePlayerBuffers(pc)
+func doEvery(d time.Duration, f func(time.Time)) {
+	for x := range time.Tick(d) {
+		f(x)
 	}
 }
 
-// apply all movements from player buffers and send the new positions
-func validatePlayerBuffers(pc net.PacketConn) {
-	log.Println("Validate Player moves")
-	for i := 0; i < len(game.players); i++ {
-		for _, value := range game.playerBuffers[game.players[i].id] {
-			// apply movements for second
-			log.Println(value)
-			respone := msg.UnitStateMsg{
-				MessageID: msg.UnitStateMsgID,
-				UnitID:    byte(game.players[i].id),
-				XPosition: 10,
-				YPosition: 10,
-				Rotation:  1,
-				Frame:     0}
-			reponseClient(pc, game.players[i].ipAddr, respone.Encode())
-		}
-	}
+func incFrame(t time.Time) {
+	log.Printf("Frame updated at %v", t)
+	game.Frame = byte(math.Mod(float64(game.Frame)+1., 30.))
 }
 
 func checkStateDuration(pc net.PacketConn, addr net.Addr) {
@@ -105,6 +91,7 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 					nextPlayerID = i + 1
 					if game.players[i].ipAddr == addr {
 						playerID = game.players[i].id
+						game.statesMap[playerID] = *NewQueue(15)
 						break
 					}
 				}
