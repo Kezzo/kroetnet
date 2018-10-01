@@ -58,11 +58,8 @@ func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	resp := msg.UnitStateMsg{}
 	for k, v := range game.players {
 		if game.players[k].ipAddr == v.ipAddr {
-			// validate and update past moves
-			// validateAllStates(v)
-
 			// send old state
-			if game.statesMap[v.id].count == 15 {
+			if game.statesMap[v.id].count > 14 {
 				oldState := game.statesMap[v.id].Pop()
 				oldUnitStateMsg := msg.UnitStateMsg{
 					MessageID: msg.PositionConfirmationMessage,
@@ -71,9 +68,8 @@ func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 					YPosition: oldState.Ypos,
 					Rotation:  0,
 					Frame:     oldState.Frame}
-				// log.Println("POP Ele: ", &oldState)
-				// log.Println("SIZE: ", game.statesMap[v.id].count)
-				log.Println("After POP QUEUE: ", game.statesMap[v.id].nodes)
+				log.Println("POP Ele: ", &oldState)
+				// log.Println("After POP QUEUE: ", game.statesMap[v.id].nodes)
 				reponseClient(pc, addr, oldUnitStateMsg.Encode())
 			}
 
@@ -89,9 +85,10 @@ func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 				Frame:     byte(game.Frame)}
 			game.statesMap[v.id].Push(&PastState{byte(game.Frame), newX, newY,
 				inputmsg.XTranslation, inputmsg.YTranslation})
-			// log.Println("SIZE: ", game.statesMap[v.id].count)
 			log.Println("After PUSH QUEUE: ", game.statesMap[v.id].nodes)
 
+			// validate and update past moves
+			// validateAllStates(v)
 		}
 	}
 	// unitstate for all players

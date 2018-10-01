@@ -1,6 +1,7 @@
 package main
 
 import "time"
+import "log"
 
 // Game holds current game properties
 type Game struct {
@@ -34,7 +35,7 @@ type Queue struct {
 // Push adds a past state to the queue.
 func (q *Queue) Push(n *PastState) {
 	if q.head == q.tail && q.count > 0 {
-		nodes := make([]*PastState, q.size)
+		nodes := make([]*PastState, len(q.nodes)+q.size)
 		copy(nodes, q.nodes[q.head:])
 		copy(nodes[len(q.nodes)-q.head:], q.nodes[:q.head])
 		q.head = 0
@@ -43,6 +44,7 @@ func (q *Queue) Push(n *PastState) {
 	}
 	q.nodes[q.tail] = n
 	q.tail = (q.tail + 1) % len(q.nodes)
+	log.Println("HEAD ", q.head, " Tail ", q.tail, "LEN ", len(q.nodes))
 	q.count++
 }
 
