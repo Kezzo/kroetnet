@@ -14,13 +14,13 @@ type UnitStateMsg struct {
 
 // Encode transforms struct into byte array
 func (m UnitStateMsg) Encode() []byte {
-	buf := make([]byte, 19)
+	buf := make([]byte, 12)
 	buf[0] = m.MessageID
 	buf[1] = m.UnitID
 	binary.LittleEndian.PutUint32(buf[2:], uint32(m.XPosition))
-	binary.LittleEndian.PutUint32(buf[9:], uint32(m.YPosition))
-	buf[17] = m.Rotation
-	buf[18] = m.Frame
+	binary.LittleEndian.PutUint32(buf[6:], uint32(m.YPosition))
+	buf[10] = m.Rotation
+	buf[11] = m.Frame
 	return buf
 }
 
@@ -29,9 +29,9 @@ func DecodeUnitStateMsg(buf []byte) UnitStateMsg {
 	unitstatemsg := UnitStateMsg{
 		MessageID: buf[0],
 		UnitID:    buf[1],
-		XPosition: int32(binary.LittleEndian.Uint32(buf[2:8])),
-		YPosition: int32(binary.LittleEndian.Uint32(buf[9:16])),
-		Rotation:  buf[17],
-		Frame:     buf[18]}
+		XPosition: int32(binary.LittleEndian.Uint32(buf[2:6])),
+		YPosition: int32(binary.LittleEndian.Uint32(buf[6:10])),
+		Rotation:  buf[10],
+		Frame:     buf[11]}
 	return unitstatemsg
 }

@@ -1,7 +1,6 @@
 package main
 
 import "time"
-import "log"
 
 // Game holds current game properties
 type Game struct {
@@ -44,7 +43,7 @@ func (q *Queue) Push(n *PastState) {
 	}
 	q.nodes[q.tail] = n
 	q.tail = (q.tail + 1) % len(q.nodes)
-	log.Println("HEAD ", q.head, " Tail ", q.tail, "LEN ", len(q.nodes))
+	// log.Println("HEAD ", q.head, " Tail ", q.tail, "LEN ", len(q.nodes))
 	q.count++
 }
 

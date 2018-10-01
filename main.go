@@ -31,8 +31,8 @@ func main() {
 			log.Print("Error: ", err)
 			continue
 		}
-		fmt.Println("State is ", game.State)
-		fmt.Println("Frame is ", game.Frame)
+		// fmt.Println("State is ", game.State)
+		// fmt.Println("Frame is ", game.Frame)
 		if game.State == 2 {
 			// frame tick every 33 ms
 			go doEvery(33*time.Millisecond, incFrame)
@@ -126,11 +126,12 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 		if msgID == msg.MatchStartAckMsgID {
 			// check if every ack was received
 			game.State = 2
+			log.Println("GAME STARTED")
 			// game ends after 2 minutes
 			game.end = time.Now().Add(time.Minute * 2)
 		}
 	case 2:
-		// hande inputs until game end
+		// handle inputs until game end
 		if msgID == msg.InputMsgID {
 			handleInputMsg(pc, addr, buf)
 		}

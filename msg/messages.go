@@ -36,5 +36,5 @@ const MatchEndMsgID byte = 10
 // MatchEndAckMsgID ...
 const MatchEndAckMsgID byte = 11
 
-// PositionConfirmationMessage to send a unitstate from an old frame
-const PositionConfirmationMessage byte = 12
+// PositionConfirmationMessageID to send a unitstate from an old frame
+const PositionConfirmationMessageID byte = 12
