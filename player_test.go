@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"kroetnet/msg"
 	"testing"
 )
@@ -26,7 +25,6 @@ func TestPlayerValidateStates(t *testing.T) {
 		{MessageID: 0, PlayerID: 16, XTranslation: 200, YTranslation: 100, Rotation: 0, Frame: 10},
 		{MessageID: 0, PlayerID: 16, XTranslation: 200, YTranslation: 160, Rotation: 0, Frame: 11}}
 	x, y := p.validateMoves(imArr)
-	fmt.Println("Move result: ", x, " ", y)
 	if x != 312 {
 		t.Errorf("Player Move returned a wrong result")
 	}

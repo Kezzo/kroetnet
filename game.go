@@ -1,5 +1,7 @@
 package main
 
+import "time"
+
 // Game holds current game properties
 type Game struct {
 	players              []Player
@@ -7,8 +9,8 @@ type Game struct {
 	Frame                byte
 	StateChangeTimestamp int64
 	start                int
-	end                  int64
-	statesMap            map[int]Queue
+	end                  time.Time
+	statesMap            []Queue
 }
 
 // PastState holds past state information
@@ -32,7 +34,7 @@ type Queue struct {
 // Push adds a past state to the queue.
 func (q *Queue) Push(n *PastState) {
 	if q.head == q.tail && q.count > 0 {
-		nodes := make([]*PastState, len(q.nodes)+q.size)
+		nodes := make([]*PastState, q.size)
 		copy(nodes, q.nodes[q.head:])
 		copy(nodes[len(q.nodes)-q.head:], q.nodes[:q.head])
 		q.head = 0
