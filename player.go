@@ -2,6 +2,7 @@ package main
 
 import (
 	"kroetnet/msg"
+	"log"
 	"math"
 	"net"
 )
@@ -25,7 +26,7 @@ func (p Player) move(input msg.InputMsg) (int32, int32) {
 	stepSize := 1. / 128.
 	// TODO check boundaries
 	if Xtrans < 127 {
-		movement := stepSize * math.Max(float64(Xtrans), 1.)
+		movement := math.Max(stepSize*float64(Xtrans), 1.)
 		summand := int32(-1 * unitSpeed * movement)
 		resX += summand
 	} else if Xtrans > 127 {
@@ -41,7 +42,7 @@ func (p Player) move(input msg.InputMsg) (int32, int32) {
 	// }
 
 	if Ytrans < 127 {
-		movement := stepSize * math.Max(float64(Ytrans), 1.)
+		movement := math.Max(stepSize*float64(Ytrans), 1.)
 		summand := int32(-1 * unitSpeed * movement)
 		resY += summand
 	} else if Ytrans > 127 {
@@ -56,7 +57,7 @@ func (p Player) move(input msg.InputMsg) (int32, int32) {
 	//   resY = -ymax
 	// }
 
-	p.X, p.Y = resX, resY
+	// p.X, p.Y = resX, resY
 
 	return resX, resY
 }

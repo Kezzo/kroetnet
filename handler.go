@@ -76,6 +76,8 @@ func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 
 			// validate move
 			newX, newY := v.move(inputmsg)
+			// log.Println("PLAYER STATE", v.Y, v.X)
+			game.players[k].X, game.players[k].Y = newX, newY
 			// confirmation for player
 			resp := msg.PositionConfirmationMsg{
 				MessageID: msg.PositionConfirmationMessageID,
