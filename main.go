@@ -11,16 +11,17 @@ import (
 
 var game = Game{
 	State:     0,
-	players:   make([]Player, 1),
+	players:   make([]Player, 2),
 	statesMap: make([]Queue, 5)}
 
 func main() {
-	udpAddr, err := net.ResolveUDPAddr("udp4", ":2448")
+	udpAddr, err := net.ResolveUDPAddr("udp", ":2448")
 	handleError(err)
 
 	network := "udp"
 	pc, err := net.ListenUDP(network, udpAddr)
 	handleError(err)
+
 	fmt.Printf("listening on (%s)%s\n", network, pc.LocalAddr())
 	defer pc.Close()
 
@@ -118,7 +119,9 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 			// match is full
 			if game.players[len(game.players)-1] != emptyPlayer {
 				// wait for all players
-				sendGameStart(pc, addr)
+				for _, v := range game.players {
+					sendGameStart(pc, v.ipAddr)
+				}
 				game.State = 1
 				game.StateChangeTimestamp = time.Now().Unix()
 			}
