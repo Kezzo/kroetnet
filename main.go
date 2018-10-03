@@ -15,10 +15,11 @@ var game = Game{
 	statesMap: make([]Queue, 5)}
 
 func main() {
+	udpAddr, err := net.ResolveUDPAddr("udp4", ":2448")
+	handleError(err)
 
-	port := ":2448"
 	network := "udp"
-	pc, err := net.ListenPacket(network, port)
+	pc, err := net.ListenUDP(network, udpAddr)
 	handleError(err)
 	fmt.Printf("listening on (%s)%s\n", network, pc.LocalAddr())
 	defer pc.Close()
