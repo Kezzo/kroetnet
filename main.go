@@ -122,8 +122,12 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 				for _, v := range game.players {
 					sendGameStart(pc, v.ipAddr)
 				}
-				game.State = 1
-				game.StateChangeTimestamp = time.Now().Unix()
+				// skip state 1 for now
+				time.Sleep(time.Second)
+				game.State = 2
+
+				// game.State = 1
+				// game.StateChangeTimestamp = time.Now().Unix()
 			}
 		}
 	case 1:
