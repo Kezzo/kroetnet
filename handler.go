@@ -57,7 +57,7 @@ func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	// log.Println("Pkg Received: ", inputmsg)
 	unitstatemsg := msg.UnitStateMsg{}
 	for k, v := range game.players {
-		if game.players[k].ipAddr == v.ipAddr {
+		if byte(v.id) == inputmsg.PlayerID {
 
 			// send old unitstate
 			// if game.statesMap[v.id].count > 14 {

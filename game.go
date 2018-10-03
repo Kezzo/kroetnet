@@ -1,6 +1,9 @@
 package main
 
-import "time"
+import (
+	"net"
+	"time"
+)
 
 // Game holds current game properties
 type Game struct {
@@ -64,4 +67,47 @@ func NewQueue(size int) *Queue {
 		nodes: make([]*PastState, size),
 		size:  size,
 	}
+}
+
+var emptyPlayer = Player{}
+
+// AddPlayer adds servers to the game
+func AddPlayer(addr net.Addr) int {
+	playerID := -1
+	nextPlayerID := 0
+	for i := 0; i < len(game.players); i++ {
+		if game.players[i] != emptyPlayer {
+			nextPlayerID = i + 1
+			// find player with same addr from udp packet
+			if game.players[i].ipAddr == addr {
+				playerID = game.players[i].id
+				break
+			}
+		}
+	}
+	// player no in match yet & match not full
+	if playerID == -1 && game.players[len(game.players)-1] == emptyPlayer {
+		game.players[nextPlayerID] = Player{id: nextPlayerID, ipAddr: addr}
+		playerID = nextPlayerID
+		game.statesMap[playerID] = *NewQueue(15)
+		return playerID
+	}
+	return -1
+}
+
+// CheckGameFull changes the gamestate when all players joined
+func CheckGameFull(pc net.PacketConn, addr net.Addr) {
+	// last player joined and match is full
+	if game.players[len(game.players)-1] != emptyPlayer {
+		// wait for all players
+		for _, v := range game.players {
+			sendGameStart(pc, v.ipAddr)
+		}
+		// skip state 1 for now
+		time.Sleep(time.Second)
+		game.State = 2
+		// game.State = 1
+		// game.StateChangeTimestamp = time.Now().Unix()
+	}
+
 }

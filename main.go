@@ -66,12 +66,12 @@ func checkStateDuration(pc net.PacketConn, addr net.Addr) {
 			game.State--
 		}
 	}
-	if game.State == 2 && (time.Now().After(game.end)) {
-		// game is over
-		sendGameEnd(pc, addr)
-		game.State = 3
-		// game.end = time.Now().Unix() + 400
-	}
+	// if game.State == 2 && (time.Now().After(game.end)) {
+	//   // game is over
+	//   sendGameEnd(pc, addr)
+	//   game.State = 3
+	//   // game.end = time.Now().Unix() + 400
+	// }
 }
 
 func handleError(err error) {
@@ -85,49 +85,14 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 	log.Println("received buffer", buf)
 
 	msgID := buf[0]
-	var emptyPlayer = Player{}
 	switch game.State {
 	case 0:
 		if msgID == msg.TimeReqMsgID {
 			handleTimeReq(pc, addr, buf, recvTime)
 		} else if msgID == msg.TimeSyncDoneMsgID {
-			playerID := -1
-			nextPlayerID := 0
-			for i := 0; i < len(game.players); i++ {
-				if game.players[i] != emptyPlayer {
-					nextPlayerID = i + 1
-					// find player with same addr from udp packet
-					if game.players[i].ipAddr == addr {
-						playerID = game.players[i].id
-						break
-					}
-				}
-			}
-			// player no in match yet & match not full
-			if playerID == -1 && game.players[len(game.players)-1] == emptyPlayer {
-				game.players[nextPlayerID] = Player{id: nextPlayerID, ipAddr: addr}
-				playerID = nextPlayerID
-				game.statesMap[playerID] = *NewQueue(15)
-			}
-			// match is full and no player found with that address
-			if playerID == -1 {
-				return
-			}
-
-			handleTimeSyncDone(pc, addr, buf, playerID)
-
-			// match is full
-			if game.players[len(game.players)-1] != emptyPlayer {
-				// wait for all players
-				for _, v := range game.players {
-					sendGameStart(pc, v.ipAddr)
-				}
-				// skip state 1 for now
-				time.Sleep(time.Second)
-				game.State = 2
-
-				// game.State = 1
-				// game.StateChangeTimestamp = time.Now().Unix()
+			if playerID := AddPlayer(addr); playerID != -1 {
+				handleTimeSyncDone(pc, addr, buf, playerID)
+				CheckGameFull(pc, addr)
 			}
 		}
 	case 1:
@@ -136,7 +101,7 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 			game.State = 2
 			log.Println("GAME STARTED")
 			// game ends after 2 minutes
-			game.end = time.Now().Add(time.Minute * 2)
+			game.end = time.Now().Add(time.Minute * 1)
 		}
 	case 2:
 		// handle inputs until game end
