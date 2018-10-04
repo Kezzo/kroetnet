@@ -35,10 +35,7 @@ func main() {
 		}
 		// fmt.Println("State is ", game.State)
 		// fmt.Println("Frame is ", game.Frame)
-		if game.State == 2 {
-			// frame tick every 33 ms
-			go doEvery(33*time.Millisecond, incFrame)
-		}
+
 		checkStateDuration(pc, addr)
 		digestPacket(pc, addr, buf[:n])
 	}
@@ -51,8 +48,11 @@ func doEvery(d time.Duration, f func(time.Time)) {
 }
 
 func incFrame(t time.Time) {
-	// log.Printf("Frame updated at %v", t)
-	game.Frame = byte(math.Mod(float64(game.Frame)+1., 30.))
+	if game.State == 2 {
+		// log.Printf("Frame updated at %v", t)
+		//fmt.Printf("Frame: %v at Time: %v \n", game.Frame, t.UnixNano()/1000000)
+		game.Frame = byte(math.Mod(float64(game.Frame)+1., 255.))
+	}
 }
 
 func checkStateDuration(pc net.PacketConn, addr net.Addr) {

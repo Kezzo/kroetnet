@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net"
 	"time"
 )
@@ -106,6 +107,11 @@ func CheckGameFull(pc net.PacketConn, addr net.Addr) {
 		// skip state 1 for now
 		time.Sleep(time.Second)
 		game.State = 2
+		// frame tick every 33 ms
+		go doEvery(33*time.Millisecond, incFrame)
+		log.Println("GAME STARTED")
+		// game ends after 2 minutes
+		game.end = time.Now().Add(time.Minute * 1)
 		// game.State = 1
 		// game.StateChangeTimestamp = time.Now().Unix()
 	}
