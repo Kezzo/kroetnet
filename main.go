@@ -97,11 +97,7 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 		}
 	case 1:
 		if msgID == msg.MatchStartAckMsgID {
-			// check if every ack was received
-			game.State = 2
-			log.Println("GAME STARTED")
-			// game ends after 2 minutes
-			game.end = time.Now().Add(time.Minute * 1)
+			// todo mark player start acked, of not send match start again
 		}
 	case 2:
 		// handle inputs until game end
