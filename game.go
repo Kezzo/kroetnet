@@ -12,7 +12,7 @@ type Game struct {
 	State                int
 	Frame                byte
 	StateChangeTimestamp int64
-	start                int
+	start                time.Time
 	end                  time.Time
 	statesMap            []Queue
 }
@@ -110,6 +110,8 @@ func CheckGameFull(pc net.PacketConn, addr net.Addr) {
 		// frame tick every 33 ms
 		go doEvery(33*time.Millisecond, incFrame)
 		log.Println("GAME STARTED")
+
+		game.start = time.Now()
 		// game ends after 2 minutes
 		game.end = time.Now().Add(time.Minute * 1)
 		// game.State = 1

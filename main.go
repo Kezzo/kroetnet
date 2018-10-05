@@ -51,7 +51,9 @@ func incFrame(t time.Time) {
 	if game.State == 2 {
 		// log.Printf("Frame updated at %v", t)
 		//fmt.Printf("Frame: %v at Time: %v \n", game.Frame, t.UnixNano()/1000000)
-		game.Frame = byte(math.Mod(float64(game.Frame)+1., 255.))
+		// calculating the frame based on the match start protects from frame drift, when this function invoked slightly earlier or delayed.
+		msSinceStart := time.Now().Sub(game.start).Nanoseconds() / 1000000
+		game.Frame = byte(math.Mod(float64(msSinceStart/33), 255.))
 	}
 }
 
