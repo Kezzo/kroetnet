@@ -6,8 +6,8 @@ import (
 	"net"
 )
 
-var xmax int32 = 2400
-var ymax int32 = 2400
+var xmax int32 = 24000
+var ymax int32 = 24000
 var unitSpeed float64 = 100
 
 // Player details
@@ -34,11 +34,11 @@ func (p Player) move(input msg.InputMsg) (int32, int32) {
 		resX += summand
 	}
 
-	// if resX > xmax {
-	//   resX = xmax
-	// } else if resX < -xmax {
-	//   resX = -xmax
-	// }
+	if resX > xmax {
+		resX = xmax
+	} else if resX < -xmax {
+		resX = -xmax
+	}
 
 	if Ytrans < 127 {
 		movement := math.Max(stepSize*float64(Ytrans), 1.)
@@ -50,11 +50,11 @@ func (p Player) move(input msg.InputMsg) (int32, int32) {
 		resY += summand
 	}
 
-	// if resY > ymax {
-	//   resY = ymax
-	// } else if resY < -ymax {
-	//   resY = -ymax
-	// }
+	if resY > ymax {
+		resY = ymax
+	} else if resY < -ymax {
+		resY = -ymax
+	}
 
 	// p.X, p.Y = resX, resY
 
