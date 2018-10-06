@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/binary"
 	"kroetnet/msg"
 	"log"
 	"math"
@@ -8,84 +9,40 @@ import (
 	"time"
 )
 
-// RcvPkt is a received by ListenUDP
-type RcvPkt struct {
-	connection *net.UDPConn
-	addr       net.Addr
-	buffer     []byte
-}
-
-// OutPkt ...
-type OutPkt struct {
-	connection net.PacketConn
-	addr       net.Addr
-	buffer     []byte
-}
-
 // Game holds current game properties
 type Game struct {
 	players              []Player
 	State                int
-	Port                 string
-	recvCh               chan *RcvPkt
-	sendCh               chan *OutPkt
 	Frame                byte
 	StateChangeTimestamp int64
 	start                time.Time
 	end                  time.Time
-	statesMap            []Queue
+	playerStateQueue     []Queue
+	network              Network
 }
 
 func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 	return &Game{
-		State:     0,
-		Port:      port,
-		players:   make([]Player, playerCount),
-		statesMap: make([]Queue, playerStateQueueCount),
-		recvCh:    make(chan *RcvPkt),
-		sendCh:    make(chan *OutPkt),
+		State:            0,
+		players:          make([]Player, playerCount),
+		playerStateQueue: make([]Queue, playerStateQueueCount),
+		network:          *newNetwork(port),
 	}
 
 }
 
 // Game server startup routines
 func (g *Game) startServer() {
-	go g.receiveUDP()
-	go g.processUDP()
-	go g.sendByteResponse()
+	go g.network.listenUDP()
+	go g.processMessages()
+	go g.network.sendByteResponse()
 	log.Println("Started game server")
-}
-
-func (g *Game) receiveUDP() {
-	udpAddr, err := net.ResolveUDPAddr("udp", g.Port)
-	if err != nil {
-		panic(err)
-	}
-	network := "udp"
-	pc, err := net.ListenUDP(network, udpAddr)
-	if err != nil {
-		panic(err)
-	}
-	log.Printf("listening on (%s)%s\n", network, pc.LocalAddr())
-	defer pc.Close()
 	for {
-		buf := make([]byte, 1024)
-		n, addr, err := pc.ReadFrom(buf)
-		// fmt.Printf("\nBuffer Content: [ % x ] \n", buf[:n])
-		if err != nil {
-			log.Print("Error: ", err)
-			continue
-		}
-		// fmt.Println("State is ", game.State)
-		// fmt.Println("Frame is ", game.Frame)
-		g.recvCh <- &RcvPkt{pc, addr, buf[:n]}
-
-		g.checkStateDuration(pc, addr)
+		g.checkStateDuration()
 	}
-
 }
 
-func (g *Game) checkStateDuration(pc net.PacketConn, addr net.Addr) {
+func (g *Game) checkStateDuration() {
 	// if no ack is received for 2 seconds
 	if time.Now().Unix()-g.StateChangeTimestamp > 2 {
 		if g.State == 1 {
@@ -120,14 +77,14 @@ func doEvery(d time.Duration, f func(time.Time)) {
 	}
 }
 
-func (g *Game) processUDP() {
-	for v := range g.recvCh {
+func (g *Game) processMessages() {
+	for v := range g.network.recvCh {
 		pc := v.connection
 		addr := v.addr
 		buf := v.buffer
 		recvTime := time.Now()
-		log.Println("received buffer", buf)
 		msgID := buf[0]
+
 		switch g.State {
 		case 0:
 			if msgID == msg.TimeReqMsgID {
@@ -151,13 +108,9 @@ func (g *Game) processUDP() {
 			if msgID == msg.MatchEndAckMsgID {
 				log.Println("GAME FINISHED")
 			}
+		default:
+			log.Println("Received invalid message :", buf, " from ", addr)
 		}
-	}
-}
-
-func (g *Game) sendByteResponse() {
-	for v := range g.sendCh {
-		reponseClient(v.connection, v.addr, v.buffer)
 	}
 }
 
@@ -181,7 +134,7 @@ func (g *Game) AddPlayer(addr net.Addr) int {
 	if playerID == -1 && g.players[len(g.players)-1] == emptyPlayer {
 		g.players[nextPlayerID] = Player{id: nextPlayerID, ipAddr: addr}
 		playerID = nextPlayerID
-		g.statesMap[playerID] = *NewQueue(15)
+		g.playerStateQueue[playerID] = *NewQueue(15)
 		return playerID
 	}
 	return -1
@@ -208,6 +161,41 @@ func (g *Game) CheckGameFull(pc net.PacketConn, addr net.Addr) {
 		// game.State = 1
 		// game.StateChangeTimestamp = time.Now().Unix()
 	}
+}
+
+func (g *Game) serve(pc net.PacketConn, addr net.Addr, buf []byte) {
+	response := []byte(" Alive!")
+	g.network.sendCh <- &OutPkt{pc, addr, response}
+}
+
+func (g *Game) handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
+	recvTime time.Time) {
+	timeResp := msg.TimeSyncRespMsg{
+		MessageID:                   msg.TimeRespMsgID,
+		TransmissionTimestamp:       binary.LittleEndian.Uint64(buf[1:]),
+		ServerReceptionTimestamp:    uint64(recvTime.UnixNano() / 100),
+		ServerTransmissionTimestamp: uint64(time.Now().UnixNano() / 100)}
+
+	// nano seconcs / 100 == ticks
+	rsp := timeResp.Encode()
+	g.network.sendCh <- &OutPkt{pc, addr, rsp}
+}
+
+func (g *Game) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte, playerID int) {
+	timesyncdoneackmsg := msg.TimeSyncDoneAckMsg{MessageID: msg.TimeSyncDoneAckMsgID, PlayerID: byte(playerID)}
+	g.network.sendCh <- &OutPkt{pc, addr, timesyncdoneackmsg.Encode()}
+}
+
+func (g *Game) sendGameStart(pc net.PacketConn, addr net.Addr) {
+	matchstart := msg.MatchStartMsg{MessageID: msg.MatchStartMsgID,
+		MatchStartTimestamp: uint64(time.Now().UnixNano()/1000000 + 1000)}
+	// ts is in ms and match start in now + 1 second
+	g.network.sendCh <- &OutPkt{pc, addr, matchstart.Encode()}
+}
+
+func (g *Game) sendGameEnd(pc net.PacketConn, addr net.Addr) {
+	matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
+	g.network.sendCh <- &OutPkt{pc, addr, matchendmsg.Encode()}
 }
 
 func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
