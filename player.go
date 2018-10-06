@@ -6,8 +6,8 @@ import (
 	"net"
 )
 
-var xmax float64 = 2400
-var ymax float64 = 2400
+var xmax float64 = 24000
+var ymax float64 = 24000
 var unitSpeed float64 = 400
 
 // Player details
