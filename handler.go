@@ -74,6 +74,8 @@ func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 			//   reponseClient(pc, addr, oldUnitStateMsg.Encode())
 			// }
 
+			// TODO: add this to buffer and check if there is a more recent rotation, if yes then set this here and send it via the unitstatemessage
+			v.rotation = inputmsg.Rotation
 			// validate move
 			newX, newY := v.move(inputmsg)
 			// log.Println("PLAYER STATE", v.Y, v.X)
