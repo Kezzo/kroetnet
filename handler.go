@@ -5,7 +5,6 @@ import (
 	"kroetnet/msg"
 	"log"
 	"net"
-	"sort"
 	"time"
 )
 
@@ -16,12 +15,12 @@ func reponseClient(pc net.PacketConn, addr net.Addr, buf []byte) {
 	}
 }
 
-func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
+func (g *Game) serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 	response := []byte(" Alive!")
-	reponseClient(pc, addr, response)
+	g.sendCh <- &OutPkt{pc, addr, response}
 }
 
-func handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
+func (g *Game) handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
 	recvTime time.Time) {
 	timeResp := msg.TimeSyncRespMsg{
 		MessageID:                   msg.TimeRespMsgID,
@@ -31,106 +30,22 @@ func handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
 
 	// nano seconcs / 100 == ticks
 	rsp := timeResp.Encode()
-	// send data
-	reponseClient(pc, addr, rsp)
+	g.sendCh <- &OutPkt{pc, addr, rsp}
 }
 
-func handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte, playerID int) {
+func (g *Game) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte, playerID int) {
 	timesyncdoneackmsg := msg.TimeSyncDoneAckMsg{MessageID: msg.TimeSyncDoneAckMsgID, PlayerID: byte(playerID)}
-	reponseClient(pc, addr, timesyncdoneackmsg.Encode())
+	g.sendCh <- &OutPkt{pc, addr, timesyncdoneackmsg.Encode()}
 }
 
-func sendGameStart(pc net.PacketConn, addr net.Addr) {
+func (g *Game) sendGameStart(pc net.PacketConn, addr net.Addr) {
 	matchstart := msg.MatchStartMsg{MessageID: msg.MatchStartMsgID,
 		MatchStartTimestamp: uint64(time.Now().UnixNano()/1000000 + 1000)}
 	// ts is in ms and match start in now + 1 second
-	reponseClient(pc, addr, matchstart.Encode())
+	g.sendCh <- &OutPkt{pc, addr, matchstart.Encode()}
 }
 
-func sendGameEnd(pc net.PacketConn, addr net.Addr) {
+func (g *Game) sendGameEnd(pc net.PacketConn, addr net.Addr) {
 	matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
-	reponseClient(pc, addr, matchendmsg.Encode())
-}
-
-func handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
-	inputmsg := msg.DecodeInputMsg(buf)
-	// log.Println("Pkg Received: ", inputmsg)
-	unitstatemsg := msg.UnitStateMsg{}
-	for k, v := range game.players {
-		if byte(v.id) == inputmsg.PlayerID {
-
-			// send old unitstate
-			// if game.statesMap[v.id].count > 14 {
-			//   oldState := game.statesMap[v.id].Pop()
-			//   oldUnitStateMsg := msg.UnitStateMsg{
-			//     MessageID: msg.PositionConfirmationMessage,
-			//     UnitID:    byte(v.id),
-			//     XPosition: oldState.Xpos,
-			//     YPosition: oldState.Ypos,
-			//     Rotation:  0,
-			//     Frame:     oldState.Frame}
-			//   log.Println("POP Ele: ", &oldState)
-			//   // log.Println("After POP QUEUE: ", game.statesMap[v.id].nodes)
-			//   reponseClient(pc, addr, oldUnitStateMsg.Encode())
-			// }
-
-			// validate move
-			newX, newY := v.move(inputmsg)
-			// log.Println("PLAYER STATE", v.Y, v.X)
-			game.players[k].X, game.players[k].Y = newX, newY
-			// confirmation for player
-			resp := msg.PositionConfirmationMsg{
-				MessageID: msg.PositionConfirmationMessageID,
-				UnitID:    byte(v.id),
-				XPosition: newX,
-				YPosition: newY,
-				Frame:     game.Frame}
-
-			// players state for all other clients
-			unitstatemsg = msg.UnitStateMsg{
-				MessageID: msg.UnitStateMsgID,
-				UnitID:    byte(v.id),
-				XPosition: newX,
-				YPosition: newY,
-				Rotation:  v.rotation,
-				Frame:     game.Frame}
-
-			// game.statesMap[v.id].Push(&PastState{byte(game.Frame), newX, newY,
-			//   inputmsg.XTranslation, inputmsg.YTranslation})
-			reponseClient(pc, addr, resp.Encode())
-			// log.Println("After PUSH QUEUE: ", game.statesMap[v.id].nodes)
-
-			// validate and update past moves
-			// validateAllStates(v)
-		}
-	}
-	// unitstate for all players
-	for _, v := range game.players {
-		if v.ipAddr != addr {
-			reponseClient(pc, v.ipAddr, unitstatemsg.Encode())
-		}
-	}
-}
-
-func validateAllStates(v Player) {
-	log.Println(game.statesMap[v.id])
-	if len(game.statesMap[v.id].nodes) == 0 {
-		return
-	}
-	sort.Slice(game.statesMap[v.id], func(i, j int) bool {
-		return game.statesMap[v.id].nodes[i].Frame <
-			game.statesMap[v.id].nodes[j].Frame
-	})
-	inpMsgArr := []msg.InputMsg{}
-	for i := 0; i < len(game.statesMap[v.id].nodes)-1; i++ {
-		ps := game.statesMap[v.id].nodes[i]
-		inpMsgArr = append(inpMsgArr,
-			msg.InputMsg{MessageID: 0,
-				PlayerID: byte(v.id), XTranslation: ps.Xtans,
-				YTranslation: ps.Ytrans, Frame: ps.Frame})
-
-	}
-	x, y := v.validateMoves(inpMsgArr[:len(inpMsgArr)-2])
-	game.statesMap[v.id].nodes[13].Xpos = x
-	game.statesMap[v.id].nodes[13].Ypos = y
+	g.sendCh <- &OutPkt{pc, addr, matchendmsg.Encode()}
 }
