@@ -8,7 +8,7 @@ import (
 
 var xmax int32 = 24000
 var ymax int32 = 24000
-var unitSpeed float64 = 100
+var unitSpeed float64 = 400
 
 // Player details
 type Player struct {
