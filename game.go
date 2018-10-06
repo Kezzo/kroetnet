@@ -52,7 +52,7 @@ func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 func (g *Game) startServer() {
 	go g.receiveUDP()
 	go g.processUDP()
-	g.sendByteResponse()
+	go g.sendByteResponse()
 	log.Println("Started game server")
 }
 
