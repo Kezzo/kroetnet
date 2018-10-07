@@ -1,5 +1,9 @@
 package main
 
+import (
+	"sync"
+)
+
 // PastState holds past state information
 type PastState struct {
 	Frame byte
@@ -13,10 +17,13 @@ type PastState struct {
 type Queue struct {
 	nodes []*PastState
 	size  int
+	mutex *sync.Mutex
 }
 
 // Push adds a past state to the queue.
 func (q *Queue) Push(n *PastState) {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	if len(q.nodes) < q.size {
 		q.nodes = append(q.nodes, n)
 	} else {
@@ -27,6 +34,8 @@ func (q *Queue) Push(n *PastState) {
 
 // Pop removes and returns a node from the queue
 func (q *Queue) Pop() *PastState {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
 	if len(q.nodes) == 0 {
 		return nil
 	}
@@ -40,5 +49,6 @@ func NewQueue(size int) *Queue {
 	return &Queue{
 		nodes: make([]*PastState, size),
 		size:  size,
+		mutex: &sync.Mutex{},
 	}
 }
