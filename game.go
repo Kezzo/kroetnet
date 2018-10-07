@@ -237,13 +237,17 @@ func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 
 			// validate move
 			newX, newY := v.move(inputmsg)
+			v.rotation = inputmsg.Rotation
+			// log.Println("PLAYER STATE", v.Y, v.X)
 			g.players[k].X, g.players[k].Y = newX, newY
 
-			// new position for actual frame and input
-			for _, v := range g.playerStateQueue[v.id].nodes {
-				if inputmsg.Frame == v.Frame {
-					v.Xpos = newX
-					v.Ypos = newY
+			if len(g.playerStateQueue[v.id].nodes) > 1 {
+				// new position for actual frame and input
+				for _, v := range g.playerStateQueue[v.id].nodes {
+					if inputmsg.Frame == v.Frame {
+						v.Xpos = newX
+						v.Ypos = newY
+					}
 				}
 			}
 
