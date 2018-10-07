@@ -2,7 +2,7 @@ package msg
 
 import "encoding/binary"
 
-// PositionConfirmationMsg Payload for incoming commnication
+// PositionConfirmationMsg Payload for outgoing commnication
 type PositionConfirmationMsg struct {
 	MessageID byte
 	UnitID    byte

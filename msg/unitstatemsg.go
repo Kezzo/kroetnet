@@ -2,7 +2,7 @@ package msg
 
 import "encoding/binary"
 
-// UnitStateMsg Payload for incoming commnication
+// UnitStateMsg Payload for outgoing commnication
 type UnitStateMsg struct {
 	MessageID byte
 	UnitID    byte

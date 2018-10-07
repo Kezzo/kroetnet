@@ -1,6 +1,6 @@
 package msg
 
-// MatchEndMsg Payload for incoming commnication
+// MatchEndMsg Payload for outgoing commnication
 type MatchEndMsg struct {
 	MessageID byte
 }

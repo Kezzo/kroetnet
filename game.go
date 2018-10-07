@@ -84,6 +84,10 @@ func (g *Game) processMessages() {
 		buf := v.buffer
 		recvTime := time.Now()
 		msgID := buf[0]
+		if msgID == msg.PingMsgID {
+			g.handlePing(pc, addr, buf)
+			return
+		}
 
 		switch g.State {
 		case 0:
@@ -184,6 +188,15 @@ func (g *Game) handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
 func (g *Game) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte, playerID int) {
 	timesyncdoneackmsg := msg.TimeSyncDoneAckMsg{MessageID: msg.TimeSyncDoneAckMsgID, PlayerID: byte(playerID)}
 	g.network.sendCh <- &OutPkt{pc, addr, timesyncdoneackmsg.Encode()}
+}
+func (g *Game) handlePing(pc net.PacketConn, addr net.Addr, buf []byte) {
+	pongMsg := msg.PongMsg{
+		MessageID:             msg.PongMsgID,
+		TransmissionTimestamp: binary.LittleEndian.Uint64(buf[1:])}
+
+	rsp := pongMsg.Encode()
+	// send data
+	g.network.sendCh <- &OutPkt{pc, addr, rsp}
 }
 
 func (g *Game) sendGameStart(pc net.PacketConn, addr net.Addr) {
