@@ -2,6 +2,7 @@ package main
 
 import (
 	"kroetnet/msg"
+	"log"
 	"testing"
 )
 
@@ -11,10 +12,10 @@ func TestPlayerMoveX(t *testing.T) {
 		PlayerID: 16, XTranslation: 255,
 		YTranslation: 0, Frame: 10}
 	x, y := p.move(im)
-	if x != 100 {
+	if x != 300 {
 		t.Errorf("Player Move returned a wrong x result")
 	}
-	if y != -100 {
+	if y != -300 {
 		t.Errorf("Player Move returned a wrong y result")
 	}
 }
@@ -25,10 +26,10 @@ func TestPlayerMoveY(t *testing.T) {
 		PlayerID: 16, XTranslation: 0,
 		YTranslation: 255, Frame: 10}
 	x, y := p.move(im)
-	if x != -100 {
+	if x != -300 {
 		t.Errorf("Player Move returned a wrong x result")
 	}
-	if y != 100 {
+	if y != 300 {
 		t.Errorf("Player Move returned a wrong y result")
 	}
 }
@@ -38,10 +39,10 @@ func TestPlayerMoveNegativeY(t *testing.T) {
 		PlayerID: 16, XTranslation: 0,
 		YTranslation: 0, Frame: 10}
 	x, y := p.move(im)
-	if x != -100 {
+	if x != -300 {
 		t.Errorf("Player Move returned a wrong x result")
 	}
-	if y != -100 {
+	if y != -300 {
 		t.Errorf("Player Move returned a wrong y result")
 	}
 }
