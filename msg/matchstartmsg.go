@@ -2,7 +2,7 @@ package msg
 
 import "encoding/binary"
 
-// MatchStartMsg Payload for incoming commnication
+// MatchStartMsg Payload for outgoing commnication
 type MatchStartMsg struct {
 	MessageID           byte
 	MatchStartTimestamp uint64

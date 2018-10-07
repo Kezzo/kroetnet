@@ -1,6 +1,6 @@
 package msg
 
-// TimeSyncDoneAckMsg Payload for incoming commnication
+// TimeSyncDoneAckMsg Payload for outgoing commnication
 type TimeSyncDoneAckMsg struct {
 	MessageID,
 	PlayerID byte

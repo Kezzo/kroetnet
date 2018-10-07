@@ -2,7 +2,7 @@ package msg
 
 import "encoding/binary"
 
-// TimeSyncRespMsg Payload for incoming commnication
+// TimeSyncRespMsg Payload for outgoing commnication
 type TimeSyncRespMsg struct {
 	MessageID byte
 	TransmissionTimestamp,
