@@ -16,7 +16,7 @@ type Game struct {
 	State                int
 	Frame                byte
 	StateChangeTimestamp int64
-	recvCount            int
+	recvCountMap         []bool
 	start                time.Time
 	end                  time.Time
 	playerStateQueue     []Queue
@@ -25,9 +25,11 @@ type Game struct {
 
 func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 	return &Game{
-		players:          make([]Player, playerCount),
-		playerStateQueue: make([]Queue, playerStateQueueCount),
-		network:          *newNetwork(port),
+		players:              make([]Player, playerCount),
+		playerStateQueue:     make([]Queue, playerStateQueueCount),
+		StateChangeTimestamp: time.Now().Add(time.Second * 15).Unix(),
+		network:              *newNetwork(port),
+		recvCountMap:         make([]bool, playerCount),
 	}
 
 }
@@ -37,7 +39,7 @@ func (g *Game) startServer() {
 	go g.network.listenUDP()
 	go g.processMessages()
 	go g.network.sendByteResponse()
-	log.Println("Started game server")
+	log.Println("Started match server")
 	for {
 		g.checkStateDuration()
 	}
@@ -48,35 +50,50 @@ func (g *Game) checkStateDuration() {
 	if time.Now().Unix()-g.StateChangeTimestamp > 2 {
 		if g.State == 1 {
 			// rollback to timesync state
-			g.State--
-		} else if g.State == 3 {
-			// rollback to input/game-end-reached state
+			log.Println("ROLLBACK from State 1 to 0")
 			g.State--
 		}
 	}
 	if g.State == 2 && (time.Now().After(g.end)) {
-		g.State = 3
 		for _, v := range g.players {
+			log.Println("SEND MATCH END to Player ", v.id)
 			matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
 			g.network.sendCh <- &OutPkt{g.network.connecton,
 				v.ipAddr, matchendmsg.Encode()}
 		}
+		g.State = 3
 	}
 }
 
 func (g *Game) incFrame(t time.Time) {
-	if g.State == 2 {
+	if g.State == 1 || g.State == 2 {
 		// log.Printf("Frame updated at %v", t)
 		//fmt.Printf("Frame: %v at Time: %v \n", game.Frame, t.UnixNano()/1000000)
 		// calculating the frame based on the match start protects from frame drift, when this function invoked slightly earlier or delayed.
 		msSinceStart := time.Now().Sub(g.start).Nanoseconds() / 1000000
 		g.Frame = byte(math.Mod(float64(msSinceStart/33), 255.))
+		for k, v := range g.players {
+			g.playerStateQueue[k].Push(&PastState{byte(g.Frame), v.X, v.Y, 0, 0})
+		}
+		// for _, v := range g.playerStateQueue {
+		//   for _, v := range v.nodes {
+		//     log.Println("QUEUE", v)
+		//   }
+		// }
 	}
 }
 
 func doEvery(d time.Duration, f func(time.Time)) {
 	for x := range time.Tick(d) {
 		f(x)
+	}
+}
+
+func (g *Game) incAckCounter(addr net.Addr) {
+	for _, v := range g.players {
+		if v.ipAddr == addr {
+			g.recvCountMap[v.id] = true
+		}
 	}
 }
 
@@ -105,9 +122,10 @@ func (g *Game) processMessages() {
 			}
 		case 1:
 			if msgID == msg.MatchStartAckMsgID {
-				g.recvCount++
-				if g.recvCount == len(g.players) {
-					// todo mark player start acked, if not send match start again
+				g.incAckCounter(addr)
+				if len(g.recvCountMap) == len(g.players) {
+					log.Println("All Clients send MatchStartAck")
+					g.State = 2
 				}
 			}
 		case 2:
@@ -117,9 +135,9 @@ func (g *Game) processMessages() {
 			}
 		case 3:
 			if msgID == msg.MatchEndAckMsgID {
-				g.recvCount++
-				if g.recvCount == len(g.players) {
-					log.Println("GAME FINISHED")
+				g.incAckCounter(addr)
+				if len(g.recvCountMap) == len(g.players) {
+					log.Println("GAME FINISHED, all clients send ACK")
 					os.Exit(0)
 				}
 			}
@@ -157,21 +175,19 @@ func (g *Game) AddPlayer(addr net.Addr) int {
 
 // CheckGameFull changes the gamestate when all players joined
 func (g *Game) CheckGameFull(pc net.PacketConn, addr net.Addr) {
-	// last player joined and match is full
 	if g.players[len(g.players)-1] != emptyPlayer {
-		// wait for all players
 		for _, v := range g.players {
 			g.sendGameStart(pc, v.ipAddr)
 		}
-		// skip state 1 for now
 		time.Sleep(time.Second)
-		g.State = 2
-		// frame tick every 33 ms
 		go doEvery(33*time.Millisecond, g.incFrame)
-		log.Println("GAME STARTED")
-		g.recvCount = 0
+		g.State = 1
+		g.StateChangeTimestamp = time.Now().Unix()
+		g.recvCountMap = make([]bool, len(g.players))
 		g.start = time.Now()
-		g.end = time.Now().Add(time.Minute * 1)
+		// g.end = time.Now().Add(time.Minute * 1)
+		g.end = time.Now().Add(time.Second * 30)
+		log.Println("Server started match")
 	}
 }
 
@@ -219,78 +235,69 @@ func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	for k, v := range g.players {
 		if byte(v.id) == inputmsg.PlayerID {
 
-			// send old unitstate
-			// if game.statesMap[v.id].count > 14 {
-			//   oldState := game.statesMap[v.id].Pop()
-			//   oldUnitStateMsg := msg.UnitStateMsg{
-			//     MessageID: msg.PositionConfirmationMessage,
-			//     UnitID:    byte(v.id),
-			//     XPosition: oldState.Xpos,
-			//     YPosition: oldState.Ypos,
-			//     Rotation:  0,
-			//     Frame:     oldState.Frame}
-			//   log.Println("POP Ele: ", &oldState)
-			//   // log.Println("After POP QUEUE: ", game.statesMap[v.id].nodes)
-			//   reponseClient(pc, addr, oldUnitStateMsg.Encode())
-			// }
-
 			// validate move
 			newX, newY := v.move(inputmsg)
-			// log.Println("PLAYER STATE", v.Y, v.X)
 			g.players[k].X, g.players[k].Y = newX, newY
-			// confirmation for player
-			resp := msg.PositionConfirmationMsg{
-				MessageID: msg.PositionConfirmationMessageID,
-				UnitID:    byte(v.id),
-				XPosition: newX,
-				YPosition: newY,
-				Frame:     g.Frame}
+
+			// new position for actual frame and input
+			for _, v := range g.playerStateQueue[v.id].nodes {
+				if inputmsg.Frame == v.Frame {
+					v.Xpos = newX
+					v.Ypos = newY
+				}
+			}
+
+			// add translation to the previous state in the queue
+			for _, v := range g.playerStateQueue[v.id].nodes {
+				if inputmsg.Frame-1 == v.Frame && v.Xtrans != 0 && v.Ytrans != 0 {
+					v.Xtrans = inputmsg.XTranslation
+					v.Ytrans = inputmsg.YTranslation
+				}
+			}
+
+			// calculate all movements from the queued states
+			for k, val := range g.playerStateQueue[v.id].nodes {
+				tmpInput := msg.InputMsg{}
+				tmpPlayer := Player{X: val.Xpos, Y: val.Ypos}
+				if k > 0 {
+					tmpInput = msg.InputMsg{
+						XTranslation: g.playerStateQueue[v.id].nodes[k-1].Xtrans,
+						YTranslation: g.playerStateQueue[v.id].nodes[k-1].Ytrans}
+					if g.playerStateQueue[v.id].nodes[k-1].Xtrans != 0 &&
+						g.playerStateQueue[v.id].nodes[k-1].Ytrans != 0 {
+						X, Y := tmpPlayer.move(tmpInput)
+						val.Xpos = X
+						val.Xpos = Y
+					}
+				}
+			}
 
 			// players state for all other clients
 			unitstatemsg = msg.UnitStateMsg{
 				MessageID: msg.UnitStateMsgID,
 				UnitID:    byte(v.id),
-				XPosition: newX,
-				YPosition: newY,
+				XPosition: g.playerStateQueue[v.id].nodes[len(g.playerStateQueue[v.id].nodes)-1].Xpos,
+				YPosition: g.playerStateQueue[v.id].nodes[len(g.playerStateQueue[v.id].nodes)-1].Ypos,
 				Rotation:  v.rotation,
 				Frame:     g.Frame}
 
-			// g.statesMap[v.id].Push(&PastState{byte(game.Frame), newX, newY,
-			//   inputmsg.XTranslation, inputmsg.YTranslation})
-			reponseClient(pc, addr, resp.Encode())
-			// log.Println("After PUSH QUEUE: ", game.statesMap[v.id].nodes)
+			if len(g.playerStateQueue[v.id].nodes) > 14 {
+				oldState := g.playerStateQueue[v.id].nodes[0]
+				resp := msg.PositionConfirmationMsg{
+					MessageID: msg.PositionConfirmationMessageID,
+					UnitID:    byte(v.id),
+					XPosition: oldState.Xpos,
+					YPosition: oldState.Ypos,
+					Frame:     oldState.Frame}
+				g.network.sendCh <- &OutPkt{pc, addr, resp.Encode()}
+			}
 
-			// validate and update past moves
-			// validateAllStates(v)
 		}
 	}
-	// unitstate for all players
+	// unitstate for all clients
 	for _, v := range g.players {
 		if v.ipAddr != addr {
-			reponseClient(pc, v.ipAddr, unitstatemsg.Encode())
+			g.network.sendCh <- &OutPkt{pc, v.ipAddr, unitstatemsg.Encode()}
 		}
 	}
 }
-
-// func validateAllStates(v Player) {
-//   log.Println(game.statesMap[v.id])
-//   if len(game.statesMap[v.id].nodes) == 0 {
-//     return
-//   }
-//   sort.Slice(game.statesMap[v.id], func(i, j int) bool {
-//     return game.statesMap[v.id].nodes[i].Frame <
-//       game.statesMap[v.id].nodes[j].Frame
-//   })
-//   inpMsgArr := []msg.InputMsg{}
-//   for i := 0; i < len(game.statesMap[v.id].nodes)-1; i++ {
-//     ps := game.statesMap[v.id].nodes[i]
-//     inpMsgArr = append(inpMsgArr,
-//       msg.InputMsg{MessageID: 0,
-//         PlayerID: byte(v.id), XTranslation: ps.Xtans,
-//         YTranslation: ps.Ytrans, Frame: ps.Frame})
-//
-//   }
-//   x, y := v.validateMoves(inpMsgArr[:len(inpMsgArr)-2])
-//   game.statesMap[v.id].nodes[13].Xpos = x
-//   game.statesMap[v.id].nodes[13].Ypos = y
-// }

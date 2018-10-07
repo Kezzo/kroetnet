@@ -19,7 +19,7 @@ type Player struct {
 	rotation byte
 }
 
-func (p Player) move(input msg.InputMsg) (int32, int32) {
+func (p *Player) move(input msg.InputMsg) (int32, int32) {
 	Xtrans, Ytrans := input.XTranslation, input.YTranslation
 	resX, resY := p.X, p.Y
 
@@ -62,7 +62,7 @@ func (p Player) move(input msg.InputMsg) (int32, int32) {
 	return resX, resY
 }
 
-func (p Player) validateMoves(buffer []msg.InputMsg) (int32, int32) {
+func (p *Player) validateMoves(buffer []msg.InputMsg) (int32, int32) {
 	for _, v := range buffer {
 		p.X, p.Y = p.move(v)
 	}

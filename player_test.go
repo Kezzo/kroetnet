@@ -2,7 +2,6 @@ package main
 
 import (
 	"kroetnet/msg"
-	"log"
 	"testing"
 )
 

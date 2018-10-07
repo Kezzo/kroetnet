@@ -35,16 +35,12 @@ func newNetwork(port string) *Network {
 	}
 }
 
-func reponseClient(pc net.PacketConn, addr net.Addr, buf []byte) {
-	log.Println("Reponse to send: ", buf, " to ", addr)
-	if _, err := pc.WriteTo(buf, addr); err != nil {
-		log.Fatalln("err sending data for msgID :", buf[0], err)
-	}
-}
-
 func (n *Network) sendByteResponse() {
 	for v := range n.sendCh {
-		reponseClient(v.connection, v.addr, v.buffer)
+		// log.Println("Reponse to send: ", v.buffer, " to ", v.addr)
+		if _, err := v.connection.WriteTo(v.buffer, v.addr); err != nil {
+			log.Fatalln("err sending data for msgID :", v.buffer[0], err)
+		}
 	}
 }
 
@@ -65,7 +61,7 @@ func (n *Network) listenUDP() {
 	for {
 		buf := make([]byte, 1024)
 		num, addr, err := pc.ReadFrom(buf)
-		log.Println("Received buffer ", buf[:num], " from ", addr)
+		// log.Println("Received buffer ", buf[:num], " from ", addr)
 		if err != nil {
 			log.Print("Error: ", err)
 			continue
