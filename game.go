@@ -236,6 +236,7 @@ func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 
 			// validate move
 			newX, newY := v.move(inputmsg)
+			v.rotation = inputmsg.Rotation
 			// log.Println("PLAYER STATE", v.Y, v.X)
 			g.players[k].X, g.players[k].Y = newX, newY
 			// confirmation for player
