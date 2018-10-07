@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"os"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type Game struct {
 	State                int
 	Frame                byte
 	StateChangeTimestamp int64
+	recvCount            int
 	start                time.Time
 	end                  time.Time
 	playerStateQueue     []Queue
@@ -23,7 +25,6 @@ type Game struct {
 
 func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 	return &Game{
-		State:            0,
 		players:          make([]Player, playerCount),
 		playerStateQueue: make([]Queue, playerStateQueueCount),
 		network:          *newNetwork(port),
@@ -53,12 +54,14 @@ func (g *Game) checkStateDuration() {
 			g.State--
 		}
 	}
-	// if game.State == 2 && (time.Now().After(game.end)) {
-	//   // game is over
-	//   sendGameEnd(pc, addr)
-	//   game.State = 3
-	//   // game.end = time.Now().Unix() + 400
-	// }
+	if g.State == 2 && (time.Now().After(g.end)) {
+		g.State = 3
+		for _, v := range g.players {
+			matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
+			g.network.sendCh <- &OutPkt{g.network.connecton,
+				v.ipAddr, matchendmsg.Encode()}
+		}
+	}
 }
 
 func (g *Game) incFrame(t time.Time) {
@@ -84,9 +87,9 @@ func (g *Game) processMessages() {
 		buf := v.buffer
 		recvTime := time.Now()
 		msgID := buf[0]
+
 		if msgID == msg.PingMsgID {
 			g.handlePing(pc, addr, buf)
-			return
 		}
 
 		switch g.State {
@@ -101,7 +104,10 @@ func (g *Game) processMessages() {
 			}
 		case 1:
 			if msgID == msg.MatchStartAckMsgID {
-				// todo mark player start acked, of not send match start again
+				g.recvCount++
+				if g.recvCount == len(g.players) {
+					// todo mark player start acked, if not send match start again
+				}
 			}
 		case 2:
 			// handle inputs until game end
@@ -110,7 +116,11 @@ func (g *Game) processMessages() {
 			}
 		case 3:
 			if msgID == msg.MatchEndAckMsgID {
-				log.Println("GAME FINISHED")
+				g.recvCount++
+				if g.recvCount == len(g.players) {
+					log.Println("GAME FINISHED")
+					os.Exit(0)
+				}
 			}
 		default:
 			log.Println("Received invalid message :", buf, " from ", addr)
@@ -134,7 +144,7 @@ func (g *Game) AddPlayer(addr net.Addr) int {
 			}
 		}
 	}
-	// player no in match yet & match not full
+	// player not in match yet & match not full
 	if playerID == -1 && g.players[len(g.players)-1] == emptyPlayer {
 		g.players[nextPlayerID] = Player{id: nextPlayerID, ipAddr: addr}
 		playerID = nextPlayerID
@@ -158,12 +168,9 @@ func (g *Game) CheckGameFull(pc net.PacketConn, addr net.Addr) {
 		// frame tick every 33 ms
 		go doEvery(33*time.Millisecond, g.incFrame)
 		log.Println("GAME STARTED")
-
+		g.recvCount = 0
 		g.start = time.Now()
-		// game ends after 2 minutes
 		g.end = time.Now().Add(time.Minute * 1)
-		// game.State = 1
-		// game.StateChangeTimestamp = time.Now().Unix()
 	}
 }
 
@@ -179,7 +186,6 @@ func (g *Game) handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
 		TransmissionTimestamp:       binary.LittleEndian.Uint64(buf[1:]),
 		ServerReceptionTimestamp:    uint64(recvTime.UnixNano() / 100),
 		ServerTransmissionTimestamp: uint64(time.Now().UnixNano() / 100)}
-
 	// nano seconcs / 100 == ticks
 	rsp := timeResp.Encode()
 	g.network.sendCh <- &OutPkt{pc, addr, rsp}
@@ -189,13 +195,12 @@ func (g *Game) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte, 
 	timesyncdoneackmsg := msg.TimeSyncDoneAckMsg{MessageID: msg.TimeSyncDoneAckMsgID, PlayerID: byte(playerID)}
 	g.network.sendCh <- &OutPkt{pc, addr, timesyncdoneackmsg.Encode()}
 }
+
 func (g *Game) handlePing(pc net.PacketConn, addr net.Addr, buf []byte) {
 	pongMsg := msg.PongMsg{
 		MessageID:             msg.PongMsgID,
 		TransmissionTimestamp: binary.LittleEndian.Uint64(buf[1:])}
-
 	rsp := pongMsg.Encode()
-	// send data
 	g.network.sendCh <- &OutPkt{pc, addr, rsp}
 }
 
@@ -204,11 +209,6 @@ func (g *Game) sendGameStart(pc net.PacketConn, addr net.Addr) {
 		MatchStartTimestamp: uint64(time.Now().UnixNano()/1000000 + 1000)}
 	// ts is in ms and match start in now + 1 second
 	g.network.sendCh <- &OutPkt{pc, addr, matchstart.Encode()}
-}
-
-func (g *Game) sendGameEnd(pc net.PacketConn, addr net.Addr) {
-	matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
-	g.network.sendCh <- &OutPkt{pc, addr, matchendmsg.Encode()}
 }
 
 func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
