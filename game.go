@@ -90,6 +90,7 @@ func (g *Game) processMessages() {
 
 		if msgID == msg.PingMsgID {
 			g.handlePing(pc, addr, buf)
+			continue
 		}
 
 		switch g.State {
