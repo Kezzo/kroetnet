@@ -21,6 +21,16 @@ func serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 	reponseClient(pc, addr, response)
 }
 
+func handlePing(pc net.PacketConn, addr net.Addr, buf []byte) {
+	pongMsg := msg.PongMsg{
+		MessageID:             msg.PongMsgID,
+		TransmissionTimestamp: binary.LittleEndian.Uint64(buf[1:])}
+
+	rsp := pongMsg.Encode()
+	// send data
+	reponseClient(pc, addr, rsp)
+}
+
 func handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
 	recvTime time.Time) {
 	timeResp := msg.TimeSyncRespMsg{

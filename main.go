@@ -87,6 +87,12 @@ func digestPacket(pc net.PacketConn, addr net.Addr, buf []byte) {
 	log.Println("received buffer", buf)
 
 	msgID := buf[0]
+
+	if msgID == msg.PingMsgID {
+		handlePing(pc, addr, buf)
+		return
+	}
+
 	switch game.State {
 	case 0:
 		if msgID == msg.TimeReqMsgID {

@@ -1,10 +1,10 @@
 package msg
 
-// PingReqMsgID ...
-const PingReqMsgID byte = 0
+// PingMsgID ...
+const PingMsgID byte = 0
 
-// PingRespMsgID ..
-const PingRespMsgID byte = 1
+// PongMsgID ..
+const PongMsgID byte = 1
 
 // TimeReqMsgID ...
 const TimeReqMsgID byte = 2
