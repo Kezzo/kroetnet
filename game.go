@@ -46,12 +46,13 @@ func (g *Game) startServer() {
 }
 
 func (g *Game) checkStateDuration() {
-	// if no ack is received for 2 seconds
-	if time.Now().Unix()-g.StateChangeTimestamp > 2 {
+	// if no ack is received for 5 seconds
+	if time.Now().Unix()-g.StateChangeTimestamp > 5 {
 		if g.State == 1 {
 			// rollback to timesync state
 			log.Println("ROLLBACK from State 1 to 0")
 			g.State--
+			// reset players joined
 		}
 	}
 	if g.State == 2 && (time.Now().After(g.end)) {
@@ -75,11 +76,6 @@ func (g *Game) incFrame(t time.Time) {
 		for k, v := range g.players {
 			g.playerStateQueue[k].Push(&PastState{byte(g.Frame), v.X, v.Y, 0, 0})
 		}
-		// for _, v := range g.playerStateQueue {
-		//   for _, v := range v.nodes {
-		//     log.Println("QUEUE", v)
-		//   }
-		// }
 	}
 }
 
@@ -208,7 +204,8 @@ func (g *Game) handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
 	g.network.sendCh <- &OutPkt{pc, addr, rsp}
 }
 
-func (g *Game) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte, playerID int) {
+func (g *Game) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte,
+	playerID int) {
 	timesyncdoneackmsg := msg.TimeSyncDoneAckMsg{MessageID: msg.TimeSyncDoneAckMsgID, PlayerID: byte(playerID)}
 	g.network.sendCh <- &OutPkt{pc, addr, timesyncdoneackmsg.Encode()}
 }
@@ -241,25 +238,24 @@ func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 			// log.Println("PLAYER STATE", v.Y, v.X)
 			g.players[k].X, g.players[k].Y = newX, newY
 
-			if len(g.playerStateQueue[v.id].nodes) > 1 {
-				// new position for actual frame and input
-				for _, v := range g.playerStateQueue[v.id].nodes {
-					if inputmsg.Frame == v.Frame {
-						v.Xpos = newX
-						v.Ypos = newY
+			for _, vl := range g.playerStateQueue[v.id].nodes {
+				if vl != nil {
+					// new position for actual frame and input
+					if inputmsg.Frame == vl.Frame {
+						vl.Xpos = newX
+						vl.Ypos = newY
+						for _, val := range g.playerStateQueue[v.id].nodes {
+							// add actual translation to the previous state in the queue
+							if vl.Frame-1 == val.Frame {
+								val.Xtrans = inputmsg.XTranslation
+								val.Ytrans = inputmsg.YTranslation
+							}
+						}
 					}
 				}
 			}
 
-			// add translation to the previous state in the queue
-			for _, v := range g.playerStateQueue[v.id].nodes {
-				if inputmsg.Frame-1 == v.Frame && v.Xtrans != 0 && v.Ytrans != 0 {
-					v.Xtrans = inputmsg.XTranslation
-					v.Ytrans = inputmsg.YTranslation
-				}
-			}
-
-			// calculate all movements from the queued states
+			// calculate/validate all movements from predecessor
 			for k, val := range g.playerStateQueue[v.id].nodes {
 				tmpInput := msg.InputMsg{}
 				tmpPlayer := Player{X: val.Xpos, Y: val.Ypos}
