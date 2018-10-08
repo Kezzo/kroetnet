@@ -257,6 +257,10 @@ func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 
 			// calculate/validate all movements from predecessor
 			for k, val := range g.playerStateQueue[v.id].nodes {
+				if val == nil {
+					continue
+				}
+
 				tmpInput := msg.InputMsg{}
 				tmpPlayer := Player{X: val.Xpos, Y: val.Ypos}
 				if k > 0 {
