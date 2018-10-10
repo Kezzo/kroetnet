@@ -17,6 +17,7 @@ type Game struct {
 	Frame                byte
 	StateChangeTimestamp int64
 	recvCountMap         []bool
+	pendingInputMsgs     []msg.InputMsg
 	start                time.Time
 	end                  time.Time
 	playerStateQueue     []Queue
@@ -30,8 +31,7 @@ func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 		StateChangeTimestamp: time.Now().Add(time.Second * 15).Unix(),
 		network:              *newNetwork(port),
 		recvCountMap:         make([]bool, playerCount),
-	}
-
+		pendingInputMsgs:     make([]msg.InputMsg, 0, playerCount)}
 }
 
 // Game server startup routines
@@ -73,9 +73,18 @@ func (g *Game) incFrame(t time.Time) {
 		// calculating the frame based on the match start protects from frame drift, when this function invoked slightly earlier or delayed.
 		msSinceStart := time.Now().Sub(g.start).Nanoseconds() / 1000000
 		g.Frame = byte(math.Mod(float64(msSinceStart/33), 255.))
-		for k, v := range g.players {
-			g.playerStateQueue[k].Push(&PastState{byte(g.Frame), v.X, v.Y, 0, 0})
+		for _, playerData := range g.players {
+			lastState := g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1]
+			nextPosX, nextPosY := int32(0), int32(0)
+			if lastState != nil {
+				nextPosX, nextPosY = GetPosition(lastState.Xpos, lastState.Ypos, lastState.Xtrans, lastState.Ytrans)
+			}
+
+			g.playerStateQueue[playerData.id].Push(&PastState{byte(g.Frame), nextPosX, nextPosY, 127, 127})
 		}
+
+		// the input msgs need to be processed after the frame has been increased to be able to consider input msgs that arrived shortly before
+		g.processPendingInputMsgs(g.network.connecton)
 	}
 }
 
@@ -182,7 +191,7 @@ func (g *Game) CheckGameFull(pc net.PacketConn, addr net.Addr) {
 		g.recvCountMap = make([]bool, len(g.players))
 		g.start = time.Now()
 		// g.end = time.Now().Add(time.Minute * 1)
-		g.end = time.Now().Add(time.Second * 30)
+		g.end = time.Now().Add(time.Second * 300)
 		log.Println("Server started match")
 	}
 }
@@ -227,81 +236,90 @@ func (g *Game) sendGameStart(pc net.PacketConn, addr net.Addr) {
 
 func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	inputmsg := msg.DecodeInputMsg(buf)
-	// log.Println("Pkg Received: ", inputmsg)
-	unitstatemsg := msg.UnitStateMsg{}
-	for k, v := range g.players {
-		if byte(v.id) == inputmsg.PlayerID {
+	//log.Println("Pkg Received: ", inputmsg)
+	g.pendingInputMsgs = append(g.pendingInputMsgs, inputmsg)
+}
 
-			// validate move
-			newX, newY := v.move(inputmsg)
-			v.rotation = inputmsg.Rotation
-			// log.Println("PLAYER STATE", v.Y, v.X)
-			g.players[k].X, g.players[k].Y = newX, newY
+func (g *Game) processPendingInputMsgs(pc net.PacketConn) {
+	for _, inputmsg := range g.pendingInputMsgs {
+		unitstatemsg := msg.UnitStateMsg{}
+		for playerID, playerData := range g.players {
+			if byte(playerData.id) == inputmsg.PlayerID {
 
-			for _, vl := range g.playerStateQueue[v.id].nodes {
-				if vl != nil {
-					// new position for actual frame and input
-					if inputmsg.Frame == vl.Frame {
-						vl.Xpos = newX
-						vl.Ypos = newY
-						for _, val := range g.playerStateQueue[v.id].nodes {
-							// add actual translation to the previous state in the queue
-							if vl.Frame-1 == val.Frame {
-								val.Xtrans = inputmsg.XTranslation
-								val.Ytrans = inputmsg.YTranslation
-							}
+				foundFrame := false
+				for _, pastState := range g.playerStateQueue[playerData.id].nodes {
+					if pastState != nil {
+						// set translation to past frame
+						if inputmsg.Frame == pastState.Frame {
+							pastState.Xtrans = inputmsg.XTranslation
+							pastState.Ytrans = inputmsg.YTranslation
+							foundFrame = true
 						}
 					}
 				}
-			}
 
-			// calculate/validate all movements from predecessor
-			for k, val := range g.playerStateQueue[v.id].nodes {
-				if val == nil {
-					continue
+				if !foundFrame {
+					log.Println("Did not find frame: ", inputmsg.Frame)
 				}
 
-				tmpInput := msg.InputMsg{}
-				tmpPlayer := Player{X: val.Xpos, Y: val.Ypos}
-				if k > 0 {
-					tmpInput = msg.InputMsg{
-						XTranslation: g.playerStateQueue[v.id].nodes[k-1].Xtrans,
-						YTranslation: g.playerStateQueue[v.id].nodes[k-1].Ytrans}
-					if g.playerStateQueue[v.id].nodes[k-1].Xtrans != 0 &&
-						g.playerStateQueue[v.id].nodes[k-1].Ytrans != 0 {
-						X, Y := tmpPlayer.move(tmpInput)
-						val.Xpos = X
-						val.Xpos = Y
+				// calculate/validate all movements from predecessor
+				for index, pastState := range g.playerStateQueue[playerData.id].nodes {
+					if index > 0 {
+						prevXPos := g.playerStateQueue[playerData.id].nodes[index-1].Xpos
+						prevYPos := g.playerStateQueue[playerData.id].nodes[index-1].Ypos
+						prevXTrans := g.playerStateQueue[playerData.id].nodes[index-1].Xtrans
+						prevYTrans := g.playerStateQueue[playerData.id].nodes[index-1].Ytrans
+						updXPos, updYPos := GetPosition(prevXPos, prevYPos, prevXTrans, prevYTrans)
+						pastState.Xpos, pastState.Ypos = updXPos, updYPos
 					}
 				}
+
+				// validate move
+				newX, newY := GetPosition(g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1].Xpos,
+					g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1].Ypos,
+					g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1].Xtrans,
+					g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1].Ytrans)
+				playerData.rotation = inputmsg.Rotation
+				// log.Println("PLAYER STATE", v.Y, v.X)
+				g.players[playerID].X, g.players[playerID].Y = newX, newY
+
+				// players state for all other clients
+				unitstatemsg = msg.UnitStateMsg{
+					MessageID: msg.UnitStateMsgID,
+					UnitID:    byte(playerData.id),
+					XPosition: newX,
+					YPosition: newY,
+					Rotation:  playerData.rotation,
+					Frame:     g.Frame}
+
+				if len(g.playerStateQueue[playerData.id].nodes) > 14 {
+					oldState := g.playerStateQueue[playerData.id].nodes[0]
+					oldXPos, oldYPos := GetPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
+
+					resp := msg.PositionConfirmationMsg{
+						MessageID: msg.PositionConfirmationMessageID,
+						UnitID:    byte(playerData.id),
+						XPosition: oldXPos,
+						YPosition: oldYPos,
+						Frame:     oldState.Frame}
+
+					for _, v := range g.players {
+						if v.id != int(inputmsg.PlayerID) {
+							g.network.sendCh <- &OutPkt{pc, v.ipAddr, resp.Encode()}
+						}
+					}
+				}
+
 			}
-
-			// players state for all other clients
-			unitstatemsg = msg.UnitStateMsg{
-				MessageID: msg.UnitStateMsgID,
-				UnitID:    byte(v.id),
-				XPosition: g.playerStateQueue[v.id].nodes[len(g.playerStateQueue[v.id].nodes)-1].Xpos,
-				YPosition: g.playerStateQueue[v.id].nodes[len(g.playerStateQueue[v.id].nodes)-1].Ypos,
-				Rotation:  v.rotation,
-				Frame:     g.Frame}
-
-			if len(g.playerStateQueue[v.id].nodes) > 14 {
-				oldState := g.playerStateQueue[v.id].nodes[0]
-				resp := msg.PositionConfirmationMsg{
-					MessageID: msg.PositionConfirmationMessageID,
-					UnitID:    byte(v.id),
-					XPosition: oldState.Xpos,
-					YPosition: oldState.Ypos,
-					Frame:     oldState.Frame}
-				g.network.sendCh <- &OutPkt{pc, addr, resp.Encode()}
+		}
+		// unitstate for all clients
+		for _, v := range g.players {
+			if v.id != int(inputmsg.PlayerID) {
+				g.network.sendCh <- &OutPkt{pc, v.ipAddr, unitstatemsg.Encode()}
 			}
-
 		}
 	}
-	// unitstate for all clients
-	for _, v := range g.players {
-		if v.ipAddr != addr {
-			g.network.sendCh <- &OutPkt{pc, v.ipAddr, unitstatemsg.Encode()}
-		}
-	}
+
+	// clear pending input msgs
+	g.pendingInputMsgs = make([]msg.InputMsg, 0, len(g.players))
 }
