@@ -30,7 +30,7 @@ type Game struct {
 
 func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 	return &Game{
-		players:              make([]Player, playerCount),
+		players:              make([]Player, 0, playerCount),
 		playerCount:          playerCount,
 		playerStateQueue:     make([]Queue, playerStateQueueCount),
 		StateChangeTimestamp: time.Now().Add(time.Second * 15).Unix(),
@@ -55,7 +55,7 @@ func (g *Game) registerGameServer() {
 
 // Game server startup routines
 func (g *Game) startServer() {
-	g.registerGameServer()
+	//g.registerGameServer()
 	go g.network.listenUDP()
 	go g.processMessages()
 	go g.network.sendByteResponse()
@@ -135,6 +135,8 @@ func (g *Game) processMessages() {
 			continue
 		}
 
+		//log.Println("Received buffer: ", buf)
+
 		switch g.State {
 		case 0:
 			if msgID == msg.TimeReqMsgID {
@@ -176,31 +178,23 @@ var emptyPlayer = Player{}
 
 // AddPlayer adds servers to the game
 func (g *Game) AddPlayer(addr net.Addr) int {
-	playerID := -1
-	nextPlayerID := 0
 	for i := 0; i < len(g.players); i++ {
-		if g.players[i] != emptyPlayer {
-			nextPlayerID = i + 1
-			// find player with same addr from udp packet
-			if g.players[i].ipAddr == addr {
-				playerID = g.players[i].id
-				break
-			}
+		playerToCheck := g.players[i].ipAddr.String()
+		incomingAddr := addr.String()
+		if playerToCheck == incomingAddr {
+			return -1
 		}
 	}
+
 	// player not in match yet & match not full
-	if playerID == -1 && g.players[len(g.players)-1] == emptyPlayer {
-		g.players[nextPlayerID] = Player{id: nextPlayerID, ipAddr: addr}
-		playerID = nextPlayerID
-		g.playerStateQueue[playerID] = *NewQueue(15)
-		return playerID
-	}
-	return -1
+	g.players = append(g.players, Player{id: len(g.players), ipAddr: addr})
+	g.playerStateQueue[len(g.players)-1] = *NewQueue(15)
+	return len(g.players) - 1
 }
 
 // CheckGameFull changes the gamestate when all players joined
 func (g *Game) CheckGameFull(pc net.PacketConn, addr net.Addr) {
-	if g.players[len(g.players)-1] != emptyPlayer {
+	if len(g.players) == g.playerCount {
 		for _, v := range g.players {
 			g.sendGameStart(pc, v.ipAddr)
 		}
