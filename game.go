@@ -1,18 +1,22 @@
 package main
 
 import (
+	"bytes"
 	"encoding/binary"
 	"kroetnet/msg"
 	"log"
 	"math"
 	"net"
+	"net/http"
 	"os"
+	"strconv"
 	"time"
 )
 
 // Game holds current game properties
 type Game struct {
 	players              []Player
+	playerCount          int
 	State                int
 	Frame                byte
 	StateChangeTimestamp int64
@@ -27,6 +31,7 @@ type Game struct {
 func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 	return &Game{
 		players:              make([]Player, playerCount),
+		playerCount:          playerCount,
 		playerStateQueue:     make([]Queue, playerStateQueueCount),
 		StateChangeTimestamp: time.Now().Add(time.Second * 15).Unix(),
 		network:              *newNetwork(port),
@@ -34,8 +39,23 @@ func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 		pendingInputMsgs:     make([]msg.InputMsg, 0, playerCount)}
 }
 
+func (g *Game) registerGameServer() {
+	// test case
+	ip := "localhost:2448"
+	count := strconv.Itoa(g.playerCount)
+	jsonStr := []byte(`{"ip":"` + ip + `", "playerCount":` + count + `}`)
+	log.Println("JSON: ", string(jsonStr))
+	resp, err := http.Post("http://127.0.0.1:8080/matchserver", "application/json",
+		bytes.NewBuffer(jsonStr))
+	if err != nil {
+		log.Panic(err)
+	}
+	log.Println("Register Game Server result: ", resp)
+}
+
 // Game server startup routines
 func (g *Game) startServer() {
+	g.registerGameServer()
 	go g.network.listenUDP()
 	go g.processMessages()
 	go g.network.sendByteResponse()
