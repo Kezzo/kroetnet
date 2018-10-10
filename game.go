@@ -41,12 +41,12 @@ func newGame(playerCount, playerStateQueueCount int, port string) *Game {
 
 func (g *Game) registerGameServer() {
 	// test case
-	ip := "localhost:2448"
+	port := g.network.Port
 	count := strconv.Itoa(g.playerCount)
-	jsonStr := []byte(`{"ip":"` + ip + `", "playerCount":` + count + `}`)
+	jsonStr := []byte(`{"port":"` + port + `", "playerCount":` + count + `}`)
 	log.Println("JSON: ", string(jsonStr))
-	resp, err := http.Post("http://127.0.0.1:8080/matchserver", "application/json",
-		bytes.NewBuffer(jsonStr))
+	resp, err := http.Post(os.Getenv("WEBSERVER_ADDR")+"matchserver",
+		"application/json", bytes.NewBuffer(jsonStr))
 	if err != nil {
 		log.Panic(err)
 	}
@@ -55,8 +55,11 @@ func (g *Game) registerGameServer() {
 
 // Game server startup routines
 func (g *Game) startServer() {
-	//g.registerGameServer()
 	go g.network.listenUDP()
+	if os.Getenv("GO_ENV") == "DEV" {
+		time.Sleep(2 * time.Second)
+		g.registerGameServer()
+	}
 	go g.processMessages()
 	go g.network.sendByteResponse()
 	log.Println("Started match server")
