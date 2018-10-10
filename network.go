@@ -57,6 +57,8 @@ func (n *Network) listenUDP() {
 		panic(err)
 	}
 	log.Printf("listening on (%s)%s\n", network, pc.LocalAddr())
+
+	n.Port = pc.LocalAddr().String()
 	defer pc.Close()
 	for {
 		buf := make([]byte, 1024)
