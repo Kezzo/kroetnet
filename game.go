@@ -318,7 +318,7 @@ func (g *Game) processPendingInputMsgs(pc net.PacketConn) {
 						Frame:     oldState.Frame}
 
 					for _, v := range g.players {
-						if v.id != int(inputmsg.PlayerID) {
+						if v.id == int(inputmsg.PlayerID) {
 							g.network.sendCh <- &OutPkt{pc, v.ipAddr, resp.Encode()}
 						}
 					}
