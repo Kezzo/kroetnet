@@ -276,7 +276,12 @@ func (g *Game) processPendingInputMsgs(pc net.PacketConn) {
 				}
 
 				if !foundFrame {
-					log.Println("Did not find frame: ", inputmsg.Frame)
+					frames := make([]byte, 0)
+					for _, pastState := range g.playerStateQueue[playerData.id].nodes {
+						frames = append(frames, pastState.Frame)
+					}
+
+					log.Println("Did not find frame: ", inputmsg.Frame, " Frames: ", frames)
 				}
 
 				// calculate/validate all movements from predecessor
