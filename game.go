@@ -95,25 +95,41 @@ func (g *Game) incFrame(t time.Time) {
 		//fmt.Printf("Frame: %v at Time: %v \n", game.Frame, t.UnixNano()/1000000)
 		// calculating the frame based on the match start protects from frame drift, when this function invoked slightly earlier or delayed.
 		msSinceStart := time.Now().Sub(g.start).Nanoseconds() / 1000000
-		g.Frame = byte(math.Mod(float64(msSinceStart/33), 255.))
-		for _, playerData := range g.players {
-			lastState := g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1]
-			nextPosX, nextPosY := int32(0), int32(0)
-			if lastState != nil {
-				nextPosX, nextPosY = GetPosition(lastState.Xpos, lastState.Ypos, lastState.Xtrans, lastState.Ytrans)
+		currentFrame := byte(math.Mod(float64(msSinceStart/33), 255.))
+
+		if g.Frame != currentFrame {
+			log.Println("Frame: ", currentFrame, " at Time: ", t.UnixNano()/1000000)
+
+			for {
+				g.Frame = byte(math.Mod(float64(g.Frame+1), 255.))
+				log.Println("Next frame: ", g.Frame)
+				for _, playerData := range g.players {
+					lastState := g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1]
+					nextPosX, nextPosY := int32(0), int32(0)
+					if lastState != nil {
+						nextPosX, nextPosY = GetPosition(lastState.Xpos, lastState.Ypos, lastState.Xtrans, lastState.Ytrans)
+					}
+
+					g.playerStateQueue[playerData.id].Push(&PastState{byte(g.Frame), nextPosX, nextPosY, 127, 127})
+				}
+
+				if g.Frame == currentFrame {
+					// the input msgs need to be processed after the frame has been increased to be able to consider input msgs that arrived shortly before
+					g.processPendingInputMsgs(g.network.connecton)
+					break
+				}
 			}
-
-			g.playerStateQueue[playerData.id].Push(&PastState{byte(g.Frame), nextPosX, nextPosY, 127, 127})
 		}
-
-		// the input msgs need to be processed after the frame has been increased to be able to consider input msgs that arrived shortly before
-		g.processPendingInputMsgs(g.network.connecton)
 	}
 }
 
 func doEvery(d time.Duration, f func(time.Time)) {
-	for x := range time.Tick(d) {
-		f(x)
+	ticker := time.NewTicker(d)
+	defer ticker.Stop()
+
+	for {
+		t := <-ticker.C
+		f(t)
 	}
 }
 
