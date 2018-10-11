@@ -63,7 +63,12 @@ func (g *Game) startServer() {
 	go g.processMessages()
 	go g.network.sendByteResponse()
 	log.Println("Started match server")
+
+	ticker := time.NewTicker(time.Millisecond * 100)
+	defer ticker.Stop()
+
 	for {
+		<-ticker.C
 		g.checkStateDuration()
 	}
 }
@@ -98,11 +103,11 @@ func (g *Game) incFrame(t time.Time) {
 		currentFrame := byte(math.Mod(float64(msSinceStart/33), 255.))
 
 		if g.Frame != currentFrame {
-			log.Println("Frame: ", currentFrame, " at Time: ", t.UnixNano()/1000000)
+			//log.Println("Frame: ", currentFrame, " at Time: ", t.UnixNano()/1000000)
 
 			for {
 				g.Frame = byte(math.Mod(float64(g.Frame+1), 255.))
-				log.Println("Next frame: ", g.Frame)
+				//log.Println("Next frame: ", g.Frame)
 				for _, playerData := range g.players {
 					lastState := g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1]
 					nextPosX, nextPosY := int32(0), int32(0)
