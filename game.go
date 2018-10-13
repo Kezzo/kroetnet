@@ -279,8 +279,8 @@ func (g *Game) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 }
 
 func (g *Game) processPendingInputMsgs(pc net.PacketConn) {
+	updatedPlayerIDs := make([]int, 0, 2)
 	for _, inputmsg := range g.pendingInputMsgs {
-		unitstatemsg := msg.UnitStateMsg{}
 		for playerID, playerData := range g.players {
 			if byte(playerData.id) == inputmsg.PlayerID {
 
@@ -308,10 +308,19 @@ func (g *Game) processPendingInputMsgs(pc net.PacketConn) {
 				// calculate/validate all movements from predecessor
 				for index, pastState := range g.playerStateQueue[playerData.id].nodes {
 					if index > 0 {
-						prevXPos := g.playerStateQueue[playerData.id].nodes[index-1].Xpos
-						prevYPos := g.playerStateQueue[playerData.id].nodes[index-1].Ypos
-						prevXTrans := g.playerStateQueue[playerData.id].nodes[index-1].Xtrans
-						prevYTrans := g.playerStateQueue[playerData.id].nodes[index-1].Ytrans
+						queue := g.playerStateQueue[playerData.id]
+						node := queue.nodes[index-1]
+
+						// node hasn't been set yet.
+						if node == nil {
+							continue
+						}
+
+						prevXPos := node.Xpos
+						prevYPos := node.Ypos
+						prevXTrans := node.Xtrans
+						prevYTrans := node.Ytrans
+
 						updXPos, updYPos := GetPosition(prevXPos, prevYPos, prevXTrans, prevYTrans)
 						pastState.Xpos, pastState.Ypos = updXPos, updYPos
 					}
@@ -326,43 +335,60 @@ func (g *Game) processPendingInputMsgs(pc net.PacketConn) {
 				// log.Println("PLAYER STATE", v.Y, v.X)
 				g.players[playerID].X, g.players[playerID].Y = newX, newY
 
-				// players state for all other clients
-				unitstatemsg = msg.UnitStateMsg{
-					MessageID: msg.UnitStateMsgID,
-					UnitID:    byte(playerData.id),
-					XPosition: newX,
-					YPosition: newY,
-					Rotation:  playerData.rotation,
-					Frame:     g.Frame}
-
-				if len(g.playerStateQueue[playerData.id].nodes) > 14 {
-					oldState := g.playerStateQueue[playerData.id].nodes[0]
-					oldXPos, oldYPos := GetPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
-
-					resp := msg.PositionConfirmationMsg{
-						MessageID: msg.PositionConfirmationMessageID,
-						UnitID:    byte(playerData.id),
-						XPosition: oldXPos,
-						YPosition: oldYPos,
-						Frame:     oldState.Frame}
-
-					for _, v := range g.players {
-						if v.id == int(inputmsg.PlayerID) {
-							g.network.sendCh <- &OutPkt{pc, v.ipAddr, resp.Encode()}
-						}
+				addPlayerID := true
+				for _, playerIDEntry := range updatedPlayerIDs {
+					if playerIDEntry == playerID {
+						addPlayerID = false
+						break
 					}
 				}
 
-			}
-		}
-		// unitstate for all clients
-		for _, v := range g.players {
-			if v.id != int(inputmsg.PlayerID) {
-				g.network.sendCh <- &OutPkt{pc, v.ipAddr, unitstatemsg.Encode()}
+				if addPlayerID {
+					updatedPlayerIDs = append(updatedPlayerIDs, playerID)
+				}
 			}
 		}
 	}
 
-	// clear pending input msgs
-	g.pendingInputMsgs = make([]msg.InputMsg, 0, len(g.players))
+	for _, playerID := range updatedPlayerIDs {
+		playerData := g.players[playerID]
+		// players state for all other clients
+		unitstatemsg := msg.UnitStateMsg{
+			MessageID: msg.UnitStateMsgID,
+			UnitID:    byte(playerData.id),
+			XPosition: playerData.X,
+			YPosition: playerData.Y,
+			Rotation:  playerData.rotation,
+			Frame:     g.Frame}
+
+		// unitstate for all clients
+		for _, v := range g.players {
+			if v.id != playerID {
+				g.network.sendCh <- &OutPkt{pc, v.ipAddr, unitstatemsg.Encode()}
+			}
+		}
+
+		if g.playerStateQueue[playerData.id].nodes[0] != nil {
+			oldState := g.playerStateQueue[playerData.id].nodes[0]
+			oldXPos, oldYPos := GetPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
+
+			resp := msg.PositionConfirmationMsg{
+				MessageID: msg.PositionConfirmationMessageID,
+				UnitID:    byte(playerData.id),
+				XPosition: oldXPos,
+				YPosition: oldYPos,
+				Frame:     oldState.Frame}
+
+			log.Println("Sending pcm with frame: ", resp.Frame)
+
+			for _, v := range g.players {
+				if v.id == playerID {
+					g.network.sendCh <- &OutPkt{pc, v.ipAddr, resp.Encode()}
+				}
+			}
+		}
+
+		// clear pending input msgs
+		g.pendingInputMsgs = make([]msg.InputMsg, 0, len(g.players))
+	}
 }
