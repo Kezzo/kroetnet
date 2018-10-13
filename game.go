@@ -379,7 +379,7 @@ func (g *Game) processPendingInputMsgs(pc net.PacketConn) {
 				YPosition: oldYPos,
 				Frame:     oldState.Frame}
 
-			log.Println("Sending pcm with frame: ", resp.Frame)
+			//log.Println("Sending pcm with frame: ", resp.Frame)
 
 			for _, v := range g.players {
 				if v.id == playerID {
