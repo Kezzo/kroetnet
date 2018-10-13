@@ -175,7 +175,7 @@ func (g *Game) processMessages() {
 			if msgID == msg.MatchStartAckMsgID {
 				g.incAckCounter(addr)
 				if len(g.recvCountMap) == len(g.players) {
-					log.Println("All Clients send MatchStartAck")
+					log.Println("All Clients sent MatchStartAck")
 					g.State = 2
 				}
 			}
@@ -188,7 +188,7 @@ func (g *Game) processMessages() {
 			if msgID == msg.MatchEndAckMsgID {
 				g.incAckCounter(addr)
 				if len(g.recvCountMap) == len(g.players) {
-					log.Println("GAME FINISHED, all clients send ACK")
+					log.Println("GAME FINISHED, all clients sent ACK")
 					os.Exit(0)
 				}
 			}
