@@ -326,14 +326,11 @@ func (g *Game) processPendingInputMsgs(pc net.PacketConn) {
 					}
 				}
 
+				latestNode := g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1]
 				// validate move
-				newX, newY := GetPosition(g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1].Xpos,
-					g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1].Ypos,
-					g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1].Xtrans,
-					g.playerStateQueue[playerData.id].nodes[len(g.playerStateQueue[playerData.id].nodes)-1].Ytrans)
-				playerData.rotation = inputmsg.Rotation
-				// log.Println("PLAYER STATE", v.Y, v.X)
-				g.players[playerID].X, g.players[playerID].Y = newX, newY
+				g.players[playerID].X, g.players[playerID].Y = GetPosition(
+					latestNode.Xpos, latestNode.Ypos, latestNode.Xtrans, latestNode.Ytrans)
+				g.players[playerID].rotation = inputmsg.Rotation
 
 				addPlayerID := true
 				for _, playerIDEntry := range updatedPlayerIDs {
