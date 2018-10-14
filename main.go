@@ -10,6 +10,6 @@ func main() {
 	if os.Getenv("GO_ENV") == "DEV" {
 		port = ":0"
 	}
-	game := newGame(playerCount, 15, port)
-	game.startServer()
+	match := newMatch(playerCount, 15, port)
+	match.startServer()
 }
