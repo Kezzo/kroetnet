@@ -6,4 +6,4 @@ docker push 524454272832.dkr.ecr.eu-west-1.amazonaws.com/dev-trinity-match-serve
 
 ssh ec2-user@34.254.60.219 -i ~/.ssh/dev-trinity-key-pair.pem 'docker kill $(docker ps --format "{{.ID}}" --filter "name=dev-trinit");uname -a;exit'
 
-aws ecs update-service --cluster dev-trinity-cluster --service dev-trinity-container-service --force-new-deployment
+aws ecs update-service --cluster dev-trinity-match-server-cluster --service dev-trinity-match-server-service --force-new-deployment

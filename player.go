@@ -3,6 +3,7 @@ package main
 import (
 	"math"
 	"net"
+	"time"
 )
 
 var xmax float64 = 24000
@@ -15,6 +16,7 @@ type Player struct {
 	id       int
 	X        int32
 	Y        int32
+	lastMsg  time.Time
 	rotation byte
 }
 

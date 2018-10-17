@@ -5,7 +5,7 @@ import (
 )
 
 func main() {
-	playerCount := 2
+	playerCount := 1
 	port := ":2448"
 	if os.Getenv("GO_ENV") == "DEV" {
 		port = ":0"

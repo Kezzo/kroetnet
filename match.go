@@ -74,6 +74,20 @@ func (m *Match) startServer() {
 }
 
 func (m *Match) checkStateDuration() {
+	if m.State > 0 {
+		pingCounter := 0
+		for _, playerData := range m.players {
+			if (time.Now().Unix() - playerData.lastMsg.Unix()) > 5 {
+				log.Println("Player with following id timed out: ", playerData.id)
+				pingCounter++
+			}
+		}
+		if pingCounter == m.playerCount {
+			log.Println("All Players timed out -  EXIT")
+			os.Exit(0)
+		}
+	}
+
 	// if no ack is received for 5 seconds
 	if time.Now().Unix()-m.StateChangeTimestamp > 5 {
 		if m.State == 1 {
@@ -258,6 +272,11 @@ func (m *Match) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte,
 }
 
 func (m *Match) handlePing(pc net.PacketConn, addr net.Addr, buf []byte) {
+	for playerID, playerData := range m.players {
+		if playerData.ipAddr.String() == addr.String() {
+			m.players[playerID].lastMsg = time.Now()
+		}
+	}
 	pongMsg := msg.PongMsg{
 		MessageID:             msg.PongMsgID,
 		TransmissionTimestamp: binary.LittleEndian.Uint64(buf[1:])}
