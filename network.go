@@ -37,10 +37,6 @@ func newNetwork(port string) *Network {
 
 func (n *Network) sendByteResponse() {
 	for v := range n.sendCh {
-		/* if v.buffer[0] != 1 {
-			log.Println("Reponse to send: ", v.buffer, " to ", v.addr)
-		}*/
-
 		if _, err := v.connection.WriteTo(v.buffer, v.addr); err != nil {
 			log.Fatalln("err sending data for msgID :", v.buffer[0], err)
 		}
@@ -73,5 +69,4 @@ func (n *Network) listenUDP() {
 		}
 		n.recvCh <- &RcvPkt{pc, addr, buf[:num]}
 	}
-
 }

@@ -1,15 +1,52 @@
 package main
 
 import (
+	"flag"
+	"log"
 	"os"
+	"runtime"
+	"runtime/pprof"
 )
 
+var cpuprofile = flag.String("cpuprofile", "", "write cpu profile to `file`")
+var memprofile = flag.String("memprofile", "", "write memory profile to `file`")
+
 func main() {
-	playerCount := 1
+
+	if os.Getenv("DEBUG") == "true" {
+		flag.Parse()
+		if *cpuprofile != "" {
+			f, err := os.Create(*cpuprofile)
+			if err != nil {
+				log.Fatal("could not create CPU profile: ", err)
+			}
+			if err := pprof.StartCPUProfile(f); err != nil {
+				log.Fatal("could not start CPU profile: ", err)
+			}
+			defer pprof.StopCPUProfile()
+		}
+	}
+
+	// main goroutine
+	playerCount := 2
 	port := ":2448"
 	if os.Getenv("GO_ENV") == "DEV" {
-		port = ":0"
+		port = ":0" // take free port
 	}
 	match := newMatch(playerCount, 15, port)
 	match.startServer()
+
+	if os.Getenv("DEBUG") == "true" {
+		if *memprofile != "" {
+			f, err := os.Create(*memprofile)
+			if err != nil {
+				log.Fatal("could not create memory profile: ", err)
+			}
+			runtime.GC() // get up-to-date statistics
+			if err := pprof.WriteHeapProfile(f); err != nil {
+				log.Fatal("could not write memory profile: ", err)
+			}
+			f.Close()
+		}
+	}
 }

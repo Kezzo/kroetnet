@@ -1,3 +1,5 @@
 main
 *.DS_Store
 .vscode
+cpu.prof
+mem.prof

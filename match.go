@@ -26,6 +26,7 @@ type Match struct {
 	end                  time.Time
 	playerStateQueue     []Queue
 	network              Network
+	endMatch             bool
 }
 
 func newMatch(playerCount, playerStateQueueCount int, port string) *Match {
@@ -70,6 +71,9 @@ func (m *Match) startServer() {
 	for {
 		<-ticker.C
 		m.checkStateDuration()
+		if m.endMatch {
+			break
+		}
 	}
 }
 
@@ -78,7 +82,7 @@ func (m *Match) checkStateDuration() {
 		pingCounter := 0
 		for _, playerData := range m.players {
 			if (time.Now().Unix() - playerData.lastMsg.Unix()) > 5 {
-				log.Println("Player with following id timed out: ", playerData.id)
+				// log.Println("Player with following id timed out: ", playerData.id)
 				pingCounter++
 			}
 		}
@@ -172,9 +176,7 @@ func (m *Match) processMessages() {
 			m.handlePing(pc, addr, buf)
 			continue
 		}
-
 		//log.Println("Received buffer: ", buf)
-
 		switch m.State {
 		case 0:
 			if msgID == msg.TimeReqMsgID {
@@ -203,7 +205,7 @@ func (m *Match) processMessages() {
 				m.incAckCounter(addr)
 				if len(m.recvCountMap) == len(m.players) {
 					log.Println("MATCH FINISHED, all clients sent ACK")
-					os.Exit(0)
+					m.endMatch = true
 				}
 			}
 		default:
@@ -242,7 +244,6 @@ func (m *Match) CheckMatchFull(pc net.PacketConn, addr net.Addr) {
 		m.StateChangeTimestamp = time.Now().Unix()
 		m.recvCountMap = make([]bool, len(m.players))
 		m.start = time.Now()
-		// m.end = time.Now().Add(time.Minute * 1)
 		m.end = time.Now().Add(time.Second * 300)
 		log.Println("Server started match")
 	}
