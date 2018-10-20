@@ -59,14 +59,19 @@ func (n *Network) listenUDP() {
 
 	n.Port = pc.LocalAddr().String()
 	defer pc.Close()
+	buf := make([]byte, 1024)
 	for {
-		buf := make([]byte, 1024)
+
 		num, addr, err := pc.ReadFrom(buf)
 		// log.Println("Received buffer ", buf[:num], " from ", addr)
 		if err != nil {
 			log.Print("Error: ", err)
 			continue
 		}
-		n.recvCh <- &RcvPkt{pc, addr, buf[:num]}
+
+		if num > 0 {
+			n.recvCh <- &RcvPkt{pc, addr, buf[:num]}
+			buf = make([]byte, 1024)
+		}
 	}
 }
