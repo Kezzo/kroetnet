@@ -242,7 +242,7 @@ func (m *Match) CheckMatchFull(pc net.PacketConn, addr net.Addr) {
 			m.sendMatchStart(pc, v.ipAddr)
 		}
 		time.Sleep(time.Second)
-		go doEvery(33*time.Millisecond, m.incFrame)
+		go doEvery(1*time.Millisecond, m.incFrame)
 		m.State = 1
 		m.StateChangeTimestamp = time.Now().Unix()
 		m.recvCountMap = make([]bool, len(m.players))
