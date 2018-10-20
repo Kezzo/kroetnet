@@ -121,7 +121,10 @@ func (m *Match) incFrame(t time.Time) {
 		currentFrame := byte(math.Mod(float64(msSinceStart/33), 255.))
 
 		if m.Frame != currentFrame {
-			//log.Println("Frame: ", currentFrame, " at Time: ", t.UnixNano()/1000000)
+
+			/*if len(m.pendingInputMsgs) > 0 {
+				log.Println("Frame: ", currentFrame, " at Time: ", t.UnixNano()/1000000, " inputmsgs: ", len(m.pendingInputMsgs))
+			}*/
 
 			for {
 				m.Frame = byte(math.Mod(float64(m.Frame+1), 255.))
