@@ -393,7 +393,7 @@ func (m *Match) processPendingInputMsgs(pc net.PacketConn) {
 			oldXPos, oldYPos := GetPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
 
 			resp := msg.PositionConfirmationMsg{
-				MessageID: msg.PositionConfirmationMessageID,
+				MessageID: msg.PositionConfirmationMsgID,
 				UnitID:    byte(playerData.id),
 				XPosition: oldXPos,
 				YPosition: oldYPos,
