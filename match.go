@@ -46,7 +46,7 @@ func (m *Match) registerMatchServer() {
 	count := strconv.Itoa(m.playerCount)
 	jsonStr := []byte(`{"port":"` + port + `", "playerCount":` + count + `}`)
 	log.Println("JSON: ", string(jsonStr))
-	resp, err := http.Post(os.Getenv("WEBSERVER_ADDR")+"matchserver",
+	resp, err := http.Post(os.Getenv("WEBSERVER_ADDR")+"/matchserver",
 		"application/json", bytes.NewBuffer(jsonStr))
 	if err != nil {
 		log.Panic(err)
