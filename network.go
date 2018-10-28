@@ -21,10 +21,10 @@ type OutPkt struct {
 
 // Network ...
 type Network struct {
-	recvCh    chan *RcvPkt
-	sendCh    chan *OutPkt
-	Port      string
-	connecton *net.UDPConn
+	recvCh     chan *RcvPkt
+	sendCh     chan *OutPkt
+	Port       string
+	connection *net.UDPConn
 }
 
 func newNetwork(port string) *Network {
@@ -51,7 +51,7 @@ func (n *Network) listenUDP() {
 	network := "udp"
 	pc, err := net.ListenUDP(network, udpAddr)
 	// temp solution
-	n.connecton = pc
+	n.connection = pc
 	if err != nil {
 		panic(err)
 	}
@@ -63,7 +63,7 @@ func (n *Network) listenUDP() {
 	for {
 
 		num, addr, err := pc.ReadFrom(buf)
-		// log.Println("Received buffer ", buf[:num], " from ", addr)
+		//log.Println("Received buffer ", buf[:num], " from ", addr)
 		if err != nil {
 			log.Print("Error: ", err)
 			continue

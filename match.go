@@ -1,15 +1,14 @@
 package main
 
 import (
-	"bytes"
 	"encoding/binary"
+	"io/ioutil"
 	"kroetnet/msg"
 	"log"
 	"math"
 	"net"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 )
 
@@ -35,34 +34,64 @@ func newMatch(playerCount, playerStateQueueCount int, port string) *Match {
 		playerCount:          playerCount,
 		playerStateQueue:     make([]Queue, playerStateQueueCount),
 		StateChangeTimestamp: time.Now().Add(time.Second * 15).Unix(),
+		State:                -1,
 		network:              *newNetwork(port),
 		recvCountMap:         make([]bool, playerCount),
 		pendingInputMsgs:     make([]msg.InputMsg, 0, playerCount)}
 }
 
 func (m *Match) registerMatchServer() {
-	// test case
-	port := m.network.Port
-	count := strconv.Itoa(m.playerCount)
-	jsonStr := []byte(`{"port":"` + port + `", "playerCount":` + count + `}`)
-	log.Println("JSON: ", string(jsonStr))
-	resp, err := http.Post(os.Getenv("WEBSERVER_ADDR")+"/matchserver",
-		"application/json", bytes.NewBuffer(jsonStr))
+	resp, err := http.Get(os.Getenv("GET_HOST_IP_ADDR"))
 	if err != nil {
 		log.Panic(err)
 	}
 	log.Println("Register Match Server result: ", resp)
+
+	body, err := ioutil.ReadAll(resp.Body)
+	var buffer = make([]byte, 1)
+	buffer[0] = msg.ServerDiscoveryMsgID
+
+	var discoveryServiceAddr = string(body[:len(body)]) + ":" + os.Getenv("DISCOVERY_SERVICE_PORT")
+
+	udpAddr, err := net.ResolveUDPAddr("udp", discoveryServiceAddr)
+	if err != nil {
+		log.Panic(err)
+	}
+
+	m.network.sendCh <- &OutPkt{m.network.connection,
+		udpAddr, buffer}
+	log.Println("Sending msg to server discovery service: ", buffer)
+
+	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
+
+	for {
+		<-ticker.C
+
+		if m.State == 0 {
+			break
+		}
+
+		// resend message until we received an ack
+		m.network.sendCh <- &OutPkt{m.network.connection,
+			udpAddr, buffer}
+		log.Println("Sending msg to server discovery service: ", buffer)
+	}
+
 }
 
 // Match server startup routines
 func (m *Match) startServer() {
 	go m.network.listenUDP()
-	if os.Getenv("GO_ENV") == "DEV" {
-		time.Sleep(2 * time.Second)
-		m.registerMatchServer()
-	}
-	go m.processMessages()
 	go m.network.sendByteResponse()
+	go m.processMessages()
+
+	if os.Getenv("GO_ENV") == "DEV" {
+		go m.registerMatchServer()
+	} else {
+		m.State = 0
+	}
+
 	log.Println("Started match server")
 
 	ticker := time.NewTicker(time.Millisecond * 100)
@@ -105,7 +134,7 @@ func (m *Match) checkStateDuration() {
 		for _, v := range m.players {
 			log.Println("SEND MATCH END to Player ", v.id)
 			matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
-			m.network.sendCh <- &OutPkt{m.network.connecton,
+			m.network.sendCh <- &OutPkt{m.network.connection,
 				v.ipAddr, matchendmsg.Encode()}
 		}
 		m.State = 3
@@ -141,7 +170,7 @@ func (m *Match) incFrame(t time.Time) {
 
 				if m.Frame == currentFrame {
 					// the input msgs need to be processed after the frame has been increased to be able to consider input msgs that arrived shortly before
-					m.processPendingInputMsgs(m.network.connecton)
+					m.processPendingInputMsgs(m.network.connection)
 					break
 				}
 			}
@@ -179,8 +208,14 @@ func (m *Match) processMessages() {
 			m.handlePing(pc, addr, buf)
 			continue
 		}
+
 		//log.Println("Received buffer: ", buf)
 		switch m.State {
+		case -1:
+			if msgID == msg.ServerDiscoveryAckMsgID {
+				log.Println("Received ServerDiscoveryAckMsgID, changing to state 0")
+				m.State = 0
+			}
 		case 0:
 			if msgID == msg.TimeReqMsgID {
 				m.handleTimeReq(pc, addr, buf, recvTime)

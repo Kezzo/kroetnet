@@ -44,3 +44,9 @@ const SpellInputMsgID byte = 13
 
 // UnitSpellActivationMsgID ...
 const UnitSpellActivationMsgID byte = 14
+
+// ServerDiscoveryMsgID ...
+const ServerDiscoveryMsgID byte = 254
+
+// ServerDiscoveryAckMsgID ...
+const ServerDiscoveryAckMsgID byte = 255
