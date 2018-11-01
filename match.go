@@ -12,18 +12,19 @@ import (
 
 // Match ...
 type Match struct {
-	players              []Player
-	playerCount          int
-	State                int
-	Frame                byte
-	StateChangeTimestamp int64
-	recvCountMap         []bool
-	pendingInputMsgs     []msg.InputMsg
-	start                time.Time
-	end                  time.Time
-	playerStateQueue     []Queue
-	network              Network
-	endMatch             bool
+	players               []Player
+	playerCount           int
+	State                 int
+	Frame                 byte
+	StateChangeTimestamp  int64
+	recvCountMap          []bool
+	pendingInputMsgs      []msg.InputMsg
+	pendingSpellInputMsgs []msg.SpellInputMsg
+	start                 time.Time
+	end                   time.Time
+	playerStateQueue      []Queue
+	network               Network
+	endMatch              bool
 }
 
 func newMatch(playerCount, playerStateQueueCount int, port string) *Match {
@@ -34,7 +35,8 @@ func newMatch(playerCount, playerStateQueueCount int, port string) *Match {
 		StateChangeTimestamp: time.Now().Add(time.Second * 15).Unix(),
 		network:              *newNetwork(port),
 		recvCountMap:         make([]bool, playerCount),
-		pendingInputMsgs:     make([]msg.InputMsg, 0, playerCount)}
+		pendingInputMsgs:     make([]msg.InputMsg, 0, playerCount)
+		pendingSpellInputMsgs: make([]msg.SpellInputMsg, 0, playerCount)}
 }
 
 // Match server startup routines
@@ -125,6 +127,8 @@ func (m *Match) incFrame(t time.Time) {
 					break
 				}
 			}
+
+			m.processPendingSpellInputMsgs(m.network.connection)
 		}
 	}
 }
@@ -184,6 +188,11 @@ func (m *Match) processMessages() {
 			if msgID == msg.InputMsgID {
 				m.handleInputMsg(pc, addr, buf)
 			}
+
+			if msgID == msg.SpellInputMsgID {
+				m.handleSpellInputMsg(pc, addr, buf)
+			}
+
 		case 3:
 			if msgID == msg.MatchEndAckMsgID {
 				m.incAckCounter(addr)
@@ -280,6 +289,12 @@ func (m *Match) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	inputmsg := msg.DecodeInputMsg(buf)
 	//log.Println("Pkg Received: ", inputmsg)
 	m.pendingInputMsgs = append(m.pendingInputMsgs, inputmsg)
+}
+
+func (m *Match) handleSpellInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
+	spellinputmsg := msg.DecodeSpellInputMsg(buf)
+	//log.Println("Pkg Received: ", inputmsg)
+	m.pendingSpellInputMsgs = append(m.pendingSpellInputMsgs, spellinputmsg)
 }
 
 func (m *Match) processPendingInputMsgs(pc net.PacketConn) {
@@ -402,4 +417,8 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedPlayerID
 			}
 		}
 	}
+}
+
+func (m *Match) processPendingSpellInputMsgs(pc net.PacketConn) {
+
 }
