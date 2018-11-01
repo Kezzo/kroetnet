@@ -285,72 +285,85 @@ func (m *Match) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 func (m *Match) processPendingInputMsgs(pc net.PacketConn) {
 	updatedPlayerIDs := make([]int, 0, 2)
 	for _, inputmsg := range m.pendingInputMsgs {
-		for playerID, playerData := range m.players {
+		for _, playerData := range m.players {
 			if byte(playerData.id) == inputmsg.PlayerID {
+				updatedPlayerIDs = m.updatePlayerState(playerData, inputmsg, updatedPlayerIDs)
+			}
+		}
 
-				foundFrame := false
-				for _, pastState := range m.playerStateQueue[playerData.id].nodes {
-					if pastState != nil {
-						// set translation to past frame
-						if inputmsg.Frame == pastState.Frame {
-							pastState.Xtrans = inputmsg.XTranslation
-							pastState.Ytrans = inputmsg.YTranslation
-							foundFrame = true
-						}
-					}
-				}
+		m.sendMessagesForUpdatedPlayers(pc, updatedPlayerIDs)
 
-				if !foundFrame {
-					frames := make([]byte, 0)
-					for _, pastState := range m.playerStateQueue[playerData.id].nodes {
-						frames = append(frames, pastState.Frame)
-					}
+		// clear pending input msgs
+		m.pendingInputMsgs = make([]msg.InputMsg, 0, len(m.players))
+	}
+}
 
-					log.Println("Did not find frame: ", inputmsg.Frame, " Frames: ", frames)
-				}
-
-				// calculate/validate all movements from predecessor
-				for index, pastState := range m.playerStateQueue[playerData.id].nodes {
-					if index > 0 {
-						queue := m.playerStateQueue[playerData.id]
-						node := queue.nodes[index-1]
-
-						// node hasn't been set yet.
-						if node == nil {
-							continue
-						}
-
-						prevXPos := node.Xpos
-						prevYPos := node.Ypos
-						prevXTrans := node.Xtrans
-						prevYTrans := node.Ytrans
-
-						updXPos, updYPos := GetPosition(prevXPos, prevYPos, prevXTrans, prevYTrans)
-						pastState.Xpos, pastState.Ypos = updXPos, updYPos
-					}
-				}
-
-				latestNode := m.playerStateQueue[playerData.id].nodes[len(m.playerStateQueue[playerData.id].nodes)-1]
-				// validate move
-				m.players[playerID].X, m.players[playerID].Y = GetPosition(
-					latestNode.Xpos, latestNode.Ypos, latestNode.Xtrans, latestNode.Ytrans)
-				m.players[playerID].rotation = inputmsg.Rotation
-
-				addPlayerID := true
-				for _, playerIDEntry := range updatedPlayerIDs {
-					if playerIDEntry == playerID {
-						addPlayerID = false
-						break
-					}
-				}
-
-				if addPlayerID {
-					updatedPlayerIDs = append(updatedPlayerIDs, playerID)
-				}
+func (m *Match) updatePlayerState(playerData Player, inputmsg msg.InputMsg, updatedPlayerIDs []int) []int {
+	foundFrame := false
+	for _, pastState := range m.playerStateQueue[playerData.id].nodes {
+		if pastState != nil {
+			// set translation to past frame
+			if inputmsg.Frame == pastState.Frame {
+				pastState.Xtrans = inputmsg.XTranslation
+				pastState.Ytrans = inputmsg.YTranslation
+				foundFrame = true
+				break
 			}
 		}
 	}
 
+	if !foundFrame {
+		frames := make([]byte, 0)
+		for _, pastState := range m.playerStateQueue[playerData.id].nodes {
+			frames = append(frames, pastState.Frame)
+		}
+
+		log.Println("Did not find frame: ", inputmsg.Frame, " Frames: ", frames)
+	}
+
+	// calculate/validate all movements from predecessor
+	for index, pastState := range m.playerStateQueue[playerData.id].nodes {
+		if index > 0 {
+			queue := m.playerStateQueue[playerData.id]
+			node := queue.nodes[index-1]
+
+			// node hasn't been set yet.
+			if node == nil {
+				continue
+			}
+
+			prevXPos := node.Xpos
+			prevYPos := node.Ypos
+			prevXTrans := node.Xtrans
+			prevYTrans := node.Ytrans
+
+			updXPos, updYPos := GetPosition(prevXPos, prevYPos, prevXTrans, prevYTrans)
+			pastState.Xpos, pastState.Ypos = updXPos, updYPos
+		}
+	}
+
+	latestNode := m.playerStateQueue[playerData.id].nodes[len(m.playerStateQueue[playerData.id].nodes)-1]
+	// validate move
+	m.players[playerData.id].X, m.players[playerData.id].Y = GetPosition(
+		latestNode.Xpos, latestNode.Ypos, latestNode.Xtrans, latestNode.Ytrans)
+	m.players[playerData.id].rotation = inputmsg.Rotation
+
+	addPlayerID := true
+	for _, playerIDEntry := range updatedPlayerIDs {
+		if playerIDEntry == playerData.id {
+			addPlayerID = false
+			break
+		}
+	}
+
+	if addPlayerID {
+		updatedPlayerIDs = append(updatedPlayerIDs, playerData.id)
+	}
+
+	return updatedPlayerIDs
+}
+
+func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedPlayerIDs []int) {
 	for _, playerID := range updatedPlayerIDs {
 		playerData := m.players[playerID]
 		// players state for all other clients
@@ -388,8 +401,5 @@ func (m *Match) processPendingInputMsgs(pc net.PacketConn) {
 				}
 			}
 		}
-
-		// clear pending input msgs
-		m.pendingInputMsgs = make([]msg.InputMsg, 0, len(m.players))
 	}
 }
