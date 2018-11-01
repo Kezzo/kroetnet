@@ -2,12 +2,10 @@ package main
 
 import (
 	"encoding/binary"
-	"io/ioutil"
 	"kroetnet/msg"
 	"log"
 	"math"
 	"net"
-	"net/http"
 	"os"
 	"time"
 )
@@ -34,50 +32,9 @@ func newMatch(playerCount, playerStateQueueCount int, port string) *Match {
 		playerCount:          playerCount,
 		playerStateQueue:     make([]Queue, playerStateQueueCount),
 		StateChangeTimestamp: time.Now().Add(time.Second * 15).Unix(),
-		State:                -1,
 		network:              *newNetwork(port),
 		recvCountMap:         make([]bool, playerCount),
 		pendingInputMsgs:     make([]msg.InputMsg, 0, playerCount)}
-}
-
-func (m *Match) registerMatchServer() {
-	resp, err := http.Get(os.Getenv("GET_HOST_IP_ADDR"))
-	if err != nil {
-		log.Panic(err)
-	}
-	log.Println("Register Match Server result: ", resp)
-
-	body, err := ioutil.ReadAll(resp.Body)
-	var buffer = make([]byte, 1)
-	buffer[0] = msg.ServerDiscoveryMsgID
-
-	var discoveryServiceAddr = string(body[:len(body)]) + ":" + os.Getenv("DISCOVERY_SERVICE_PORT")
-
-	udpAddr, err := net.ResolveUDPAddr("udp", discoveryServiceAddr)
-	if err != nil {
-		log.Panic(err)
-	}
-
-	m.network.sendCh <- &OutPkt{m.network.connection,
-		udpAddr, buffer}
-	log.Println("Sending msg to server discovery service: ", buffer)
-
-	ticker := time.NewTicker(time.Second * 5)
-	defer ticker.Stop()
-
-	for {
-		<-ticker.C
-
-		if m.State == 0 {
-			break
-		}
-
-		// resend message until we received an ack
-		m.network.sendCh <- &OutPkt{m.network.connection,
-			udpAddr, buffer}
-		log.Println("Sending msg to server discovery service: ", buffer)
-	}
-
 }
 
 // Match server startup routines
@@ -85,12 +42,6 @@ func (m *Match) startServer() {
 	go m.network.listenUDP()
 	go m.network.sendByteResponse()
 	go m.processMessages()
-
-	if os.Getenv("GO_ENV") == "DEV" {
-		go m.registerMatchServer()
-	} else {
-		m.State = 0
-	}
 
 	log.Println("Started match server")
 
@@ -211,11 +162,6 @@ func (m *Match) processMessages() {
 
 		//log.Println("Received buffer: ", buf)
 		switch m.State {
-		case -1:
-			if msgID == msg.ServerDiscoveryAckMsgID {
-				log.Println("Received ServerDiscoveryAckMsgID, changing to state 0")
-				m.State = 0
-			}
 		case 0:
 			if msgID == msg.TimeReqMsgID {
 				m.handleTimeReq(pc, addr, buf, recvTime)
