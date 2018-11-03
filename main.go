@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"kroetnet/match"
 	"log"
 	"os"
 	"runtime"
@@ -31,8 +32,8 @@ func main() {
 	playerCount := 1
 	port := ":2448"
 
-	match := newMatch(playerCount, 15, port)
-	match.startServer()
+	match := match.NewMatch(playerCount, 15, port)
+	match.StartServer()
 
 	if os.Getenv("DEBUG") == "true" {
 		if *memprofile != "" {

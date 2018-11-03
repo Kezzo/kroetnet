@@ -7,7 +7,8 @@ type UnitAbilityActivationMsg struct {
 	AbilityID,
 	Rotation,
 	StartFrame,
-	ActivationFrame byte
+	ActivationFrame,
+	EndFrame byte
 }
 
 // Encode transforms struct into byte array
@@ -19,6 +20,7 @@ func (m UnitAbilityActivationMsg) Encode() []byte {
 	buf[3] = m.Rotation
 	buf[4] = m.StartFrame
 	buf[5] = m.ActivationFrame
+	buf[6] = m.EndFrame
 	return buf
 }
 
@@ -30,6 +32,7 @@ func DecodeUnitAbilityActivationMsg(buf []byte) UnitAbilityActivationMsg {
 		AbilityID:       buf[2],
 		Rotation:        buf[3],
 		StartFrame:      buf[4],
-		ActivationFrame: buf[5]}
+		ActivationFrame: buf[5],
+		EndFrame:        buf[6]}
 	return UnitAbilityActivationMsg
 }

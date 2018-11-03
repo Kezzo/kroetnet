@@ -1,48 +1,53 @@
-package main
+package match
 
 import (
 	"encoding/binary"
+	"kroetnet/abilities"
 	"kroetnet/msg"
+	"kroetnet/network"
+	"kroetnet/player"
 	"log"
 	"math"
 	"net"
-	"os"
 	"time"
 )
 
 // Match ...
 type Match struct {
-	players               []Player
-	playerCount           int
-	State                 int
-	Frame                 byte
-	StateChangeTimestamp  int64
-	recvCountMap          []bool
-	pendingInputMsgs      []msg.InputMsg
+	players                 []player.Player
+	playerCount             int
+	State                   int
+	Frame                   byte
+	StateChangeTimestamp    int64
+	recvCountMap            []bool
+	pendingInputMsgs        []msg.InputMsg
 	pendingAbilityInputMsgs []msg.AbilityInputMsg
-	start                 time.Time
-	end                   time.Time
-	playerStateQueue      []Queue
-	network               Network
-	endMatch              bool
+	start                   time.Time
+	end                     time.Time
+	playerStateQueue        []Queue
+	abilities               map[byte]abilities.Ability
+	network                 network.Network
+	endMatch                bool
 }
 
-func newMatch(playerCount, playerStateQueueCount int, port string) *Match {
+// NewMatch ...
+func NewMatch(playerCount, playerStateQueueCount int, port string) *Match {
 	return &Match{
-		players:              make([]Player, 0, playerCount),
-		playerCount:          playerCount,
-		playerStateQueue:     make([]Queue, playerStateQueueCount),
-		StateChangeTimestamp: time.Now().Add(time.Second * 15).Unix(),
-		network:              *newNetwork(port),
-		recvCountMap:         make([]bool, playerCount),
-		pendingInputMsgs:     make([]msg.InputMsg, 0, playerCount)
+		players:                 make([]player.Player, 0, playerCount),
+		playerCount:             playerCount,
+		playerStateQueue:        make([]Queue, playerStateQueueCount),
+		abilities:               make(map[byte]abilities.Ability),
+		StateChangeTimestamp:    time.Now().Add(time.Second * 15).Unix(),
+		network:                 *network.NewNetwork(port),
+		recvCountMap:            make([]bool, playerCount),
+		pendingInputMsgs:        make([]msg.InputMsg, 0, playerCount),
 		pendingAbilityInputMsgs: make([]msg.AbilityInputMsg, 0, playerCount)}
 }
 
-// Match server startup routines
-func (m *Match) startServer() {
-	go m.network.listenUDP()
-	go m.network.sendByteResponse()
+// StartServer Match server startup routines
+func (m *Match) StartServer() {
+	go m.network.ListenUDP()
+	go m.network.SendByteResponse()
 	go m.processMessages()
 
 	log.Println("Started match server")
@@ -63,14 +68,14 @@ func (m *Match) checkStateDuration() {
 	if m.State > 0 {
 		pingCounter := 0
 		for _, playerData := range m.players {
-			if (time.Now().Unix() - playerData.lastMsg.Unix()) > 5 {
+			if (time.Now().Unix() - playerData.LastMsg.Unix()) > 5 {
 				// log.Println("Player with following id timed out: ", playerData.id)
 				pingCounter++
 			}
 		}
 		if pingCounter == m.playerCount {
 			log.Println("All Players timed out -  EXIT")
-			os.Exit(0)
+			//os.Exit(0)
 		}
 	}
 
@@ -85,10 +90,10 @@ func (m *Match) checkStateDuration() {
 	}
 	if m.State == 2 && (time.Now().After(m.end)) {
 		for _, v := range m.players {
-			log.Println("SEND MATCH END to Player ", v.id)
+			log.Println("SEND MATCH END to Player ", v.ID)
 			matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
-			m.network.sendCh <- &OutPkt{m.network.connection,
-				v.ipAddr, matchendmsg.Encode()}
+			m.network.SendCh <- &network.OutPkt{Connection: m.network.Connection,
+				Addr: v.IPAddr, Buffer: matchendmsg.Encode()}
 		}
 		m.State = 3
 	}
@@ -112,23 +117,21 @@ func (m *Match) incFrame(t time.Time) {
 				m.Frame = byte(math.Mod(float64(m.Frame+1), 255.))
 				//log.Println("Next frame: ", m.Frame)
 				for _, playerData := range m.players {
-					lastState := m.playerStateQueue[playerData.id].nodes[len(m.playerStateQueue[playerData.id].nodes)-1]
+					lastState := m.playerStateQueue[playerData.ID].nodes[len(m.playerStateQueue[playerData.ID].nodes)-1]
 					nextPosX, nextPosY := int32(0), int32(0)
 					if lastState != nil {
-						nextPosX, nextPosY = GetPosition(lastState.Xpos, lastState.Ypos, lastState.Xtrans, lastState.Ytrans)
+						nextPosX, nextPosY = player.GetPosition(lastState.Xpos, lastState.Ypos, lastState.Xtrans, lastState.Ytrans)
 					}
 
-					m.playerStateQueue[playerData.id].Push(&PastState{byte(m.Frame), nextPosX, nextPosY, 127, 127})
+					m.playerStateQueue[playerData.ID].Push(&PastState{byte(m.Frame), nextPosX, nextPosY, 127, 127})
 				}
 
 				if m.Frame == currentFrame {
 					// the input msgs need to be processed after the frame has been increased to be able to consider input msgs that arrived shortly before
-					m.processPendingInputMsgs(m.network.connection)
+					m.updateMatchState(m.network.Connection)
 					break
 				}
 			}
-
-			m.processPendingAbilityInputMsgs(m.network.connection)
 		}
 	}
 }
@@ -145,17 +148,17 @@ func doEvery(d time.Duration, f func(time.Time)) {
 
 func (m *Match) incAckCounter(addr net.Addr) {
 	for _, v := range m.players {
-		if v.ipAddr == addr {
-			m.recvCountMap[v.id] = true
+		if v.IPAddr == addr {
+			m.recvCountMap[v.ID] = true
 		}
 	}
 }
 
 func (m *Match) processMessages() {
-	for v := range m.network.recvCh {
-		pc := v.connection
-		addr := v.addr
-		buf := v.buffer
+	for v := range m.network.RecvCh {
+		pc := v.Connection
+		addr := v.Addr
+		buf := v.Buffer
 		recvTime := time.Now()
 		msgID := buf[0]
 
@@ -207,12 +210,10 @@ func (m *Match) processMessages() {
 	}
 }
 
-var emptyPlayer = Player{}
-
 // AddPlayer adds servers to the match
 func (m *Match) AddPlayer(addr net.Addr) int {
 	for i := 0; i < len(m.players); i++ {
-		playerToCheck := m.players[i].ipAddr.String()
+		playerToCheck := m.players[i].IPAddr.String()
 		incomingAddr := addr.String()
 		if playerToCheck == incomingAddr {
 			return -1
@@ -220,7 +221,7 @@ func (m *Match) AddPlayer(addr net.Addr) int {
 	}
 
 	// player not in match yet & match not full
-	m.players = append(m.players, Player{id: len(m.players), ipAddr: addr})
+	m.players = append(m.players, player.Player{ID: byte(len(m.players)), IPAddr: addr})
 	m.playerStateQueue[len(m.players)-1] = *NewQueue(15)
 	return len(m.players) - 1
 }
@@ -229,7 +230,7 @@ func (m *Match) AddPlayer(addr net.Addr) int {
 func (m *Match) CheckMatchFull(pc net.PacketConn, addr net.Addr) {
 	if len(m.players) == m.playerCount {
 		for _, v := range m.players {
-			m.sendMatchStart(pc, v.ipAddr)
+			m.sendMatchStart(pc, v.IPAddr)
 		}
 		time.Sleep(time.Second)
 		go doEvery(1*time.Millisecond, m.incFrame)
@@ -244,7 +245,7 @@ func (m *Match) CheckMatchFull(pc net.PacketConn, addr net.Addr) {
 
 func (m *Match) serve(pc net.PacketConn, addr net.Addr, buf []byte) {
 	response := []byte(" Alive!")
-	m.network.sendCh <- &OutPkt{pc, addr, response}
+	m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: addr, Buffer: response}
 }
 
 func (m *Match) handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
@@ -256,33 +257,33 @@ func (m *Match) handleTimeReq(pc net.PacketConn, addr net.Addr, buf []byte,
 		ServerTransmissionTimestamp: uint64(time.Now().UnixNano() / 100)}
 	// nano seconcs / 100 == ticks
 	rsp := timeResp.Encode()
-	m.network.sendCh <- &OutPkt{pc, addr, rsp}
+	m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: addr, Buffer: rsp}
 }
 
 func (m *Match) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte,
 	playerID int) {
 	timesyncdoneackmsg := msg.TimeSyncDoneAckMsg{MessageID: msg.TimeSyncDoneAckMsgID, PlayerID: byte(playerID)}
-	m.network.sendCh <- &OutPkt{pc, addr, timesyncdoneackmsg.Encode()}
+	m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: addr, Buffer: timesyncdoneackmsg.Encode()}
 }
 
 func (m *Match) handlePing(pc net.PacketConn, addr net.Addr, buf []byte) {
 	for playerID, playerData := range m.players {
-		if playerData.ipAddr.String() == addr.String() {
-			m.players[playerID].lastMsg = time.Now()
+		if playerData.IPAddr.String() == addr.String() {
+			m.players[playerID].LastMsg = time.Now()
 		}
 	}
 	pongMsg := msg.PongMsg{
 		MessageID:             msg.PongMsgID,
 		TransmissionTimestamp: binary.LittleEndian.Uint64(buf[1:])}
 	rsp := pongMsg.Encode()
-	m.network.sendCh <- &OutPkt{pc, addr, rsp}
+	m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: addr, Buffer: rsp}
 }
 
 func (m *Match) sendMatchStart(pc net.PacketConn, addr net.Addr) {
 	matchstart := msg.MatchStartMsg{MessageID: msg.MatchStartMsgID,
 		MatchStartTimestamp: uint64(time.Now().UnixNano()/1000000 + 1000)}
 	// ts is in ms and match start in now + 1 second
-	m.network.sendCh <- &OutPkt{pc, addr, matchstart.Encode()}
+	m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: addr, Buffer: matchstart.Encode()}
 }
 
 func (m *Match) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
@@ -297,25 +298,50 @@ func (m *Match) handleAbilityInputMsg(pc net.PacketConn, addr net.Addr, buf []by
 	m.pendingAbilityInputMsgs = append(m.pendingAbilityInputMsgs, Abilityinputmsg)
 }
 
-func (m *Match) processPendingInputMsgs(pc net.PacketConn) {
-	updatedPlayerIDs := make([]int, 0, 2)
+func (m *Match) updateMatchState(pc net.PacketConn) {
+	updatedUnitIDs := make(map[byte]bool)
 	for _, inputmsg := range m.pendingInputMsgs {
 		for _, playerData := range m.players {
-			if byte(playerData.id) == inputmsg.PlayerID {
-				updatedPlayerIDs = m.updatePlayerState(playerData, inputmsg, updatedPlayerIDs)
+			if byte(playerData.ID) == inputmsg.PlayerID {
+				updatedUnitIDs = m.updatePlayerPosition(playerData, inputmsg, updatedUnitIDs)
 			}
 		}
-
-		m.sendMessagesForUpdatedPlayers(pc, updatedPlayerIDs)
 
 		// clear pending input msgs
 		m.pendingInputMsgs = make([]msg.InputMsg, 0, len(m.players))
 	}
+
+	for _, abilityinputmsg := range m.pendingAbilityInputMsgs {
+		for _, playerData := range m.players {
+			if byte(playerData.ID) == abilityinputmsg.PlayerID {
+				m.processPendingAbilityInputMsg(pc, abilityinputmsg)
+			}
+		}
+
+		// clear pending input msgs
+		m.pendingInputMsgs = make([]msg.InputMsg, 0, len(m.players))
+	}
+
+	updatedUnitIDs = m.updateAbilityStates(updatedUnitIDs)
+
+	m.sendMessagesForUpdatedPlayers(pc, updatedUnitIDs)
 }
 
-func (m *Match) updatePlayerState(playerData Player, inputmsg msg.InputMsg, updatedPlayerIDs []int) []int {
+func (m *Match) updateAbilityStates(updatedUnitIDs map[byte]bool) map[byte]bool {
+	for playerID, ability := range m.abilities {
+		updatedUnitIDs = ability.Tick(m.players, m.Frame, updatedUnitIDs)
+
+		if !ability.IsActive(m.Frame) {
+			m.abilities[playerID] = nil
+		}
+	}
+
+	return updatedUnitIDs
+}
+
+func (m *Match) updatePlayerPosition(playerData player.Player, inputmsg msg.InputMsg, updatedUnitIDs map[byte]bool) map[byte]bool {
 	foundFrame := false
-	for _, pastState := range m.playerStateQueue[playerData.id].nodes {
+	for _, pastState := range m.playerStateQueue[playerData.ID].nodes {
 		if pastState != nil {
 			// set translation to past frame
 			if inputmsg.Frame == pastState.Frame {
@@ -329,7 +355,7 @@ func (m *Match) updatePlayerState(playerData Player, inputmsg msg.InputMsg, upda
 
 	if !foundFrame {
 		frames := make([]byte, 0)
-		for _, pastState := range m.playerStateQueue[playerData.id].nodes {
+		for _, pastState := range m.playerStateQueue[playerData.ID].nodes {
 			frames = append(frames, pastState.Frame)
 		}
 
@@ -337,9 +363,9 @@ func (m *Match) updatePlayerState(playerData Player, inputmsg msg.InputMsg, upda
 	}
 
 	// calculate/validate all movements from predecessor
-	for index, pastState := range m.playerStateQueue[playerData.id].nodes {
+	for index, pastState := range m.playerStateQueue[playerData.ID].nodes {
 		if index > 0 {
-			queue := m.playerStateQueue[playerData.id]
+			queue := m.playerStateQueue[playerData.ID]
 			node := queue.nodes[index-1]
 
 			// node hasn't been set yet.
@@ -352,58 +378,52 @@ func (m *Match) updatePlayerState(playerData Player, inputmsg msg.InputMsg, upda
 			prevXTrans := node.Xtrans
 			prevYTrans := node.Ytrans
 
-			updXPos, updYPos := GetPosition(prevXPos, prevYPos, prevXTrans, prevYTrans)
+			updXPos, updYPos := player.GetPosition(prevXPos, prevYPos, prevXTrans, prevYTrans)
 			pastState.Xpos, pastState.Ypos = updXPos, updYPos
 		}
 	}
 
-	latestNode := m.playerStateQueue[playerData.id].nodes[len(m.playerStateQueue[playerData.id].nodes)-1]
+	latestNode := m.playerStateQueue[playerData.ID].nodes[len(m.playerStateQueue[playerData.ID].nodes)-1]
 	// validate move
-	m.players[playerData.id].X, m.players[playerData.id].Y = GetPosition(
+	m.players[playerData.ID].X, m.players[playerData.ID].Y = player.GetPosition(
 		latestNode.Xpos, latestNode.Ypos, latestNode.Xtrans, latestNode.Ytrans)
-	m.players[playerData.id].rotation = inputmsg.Rotation
+	m.players[playerData.ID].Rotation = inputmsg.Rotation
 
-	addPlayerID := true
-	for _, playerIDEntry := range updatedPlayerIDs {
-		if playerIDEntry == playerData.id {
-			addPlayerID = false
-			break
-		}
-	}
+	updatedUnitIDs[playerData.ID] = true
 
-	if addPlayerID {
-		updatedPlayerIDs = append(updatedPlayerIDs, playerData.id)
-	}
-
-	return updatedPlayerIDs
+	return updatedUnitIDs
 }
 
-func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedPlayerIDs []int) {
-	for _, playerID := range updatedPlayerIDs {
+func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs map[byte]bool) {
+	for playerID, isUpdated := range updatedUnitIDs {
+		if !isUpdated {
+			continue
+		}
+
 		playerData := m.players[playerID]
 		// players state for all other clients
 		unitstatemsg := msg.UnitStateMsg{
 			MessageID: msg.UnitStateMsgID,
-			UnitID:    byte(playerData.id),
+			UnitID:    byte(playerData.ID),
 			XPosition: playerData.X,
 			YPosition: playerData.Y,
-			Rotation:  playerData.rotation,
+			Rotation:  playerData.Rotation,
 			Frame:     m.Frame}
 
 		// unitstate for all clients
 		for _, v := range m.players {
-			if v.id != playerID {
-				m.network.sendCh <- &OutPkt{pc, v.ipAddr, unitstatemsg.Encode()}
+			if v.ID != playerID {
+				m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: unitstatemsg.Encode()}
 			}
 		}
 
-		if m.playerStateQueue[playerData.id].nodes[0] != nil {
-			oldState := m.playerStateQueue[playerData.id].nodes[0]
-			oldXPos, oldYPos := GetPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
+		if m.playerStateQueue[playerData.ID].nodes[0] != nil {
+			oldState := m.playerStateQueue[playerData.ID].nodes[0]
+			oldXPos, oldYPos := player.GetPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
 
 			resp := msg.PositionConfirmationMsg{
 				MessageID: msg.PositionConfirmationMsgID,
-				UnitID:    byte(playerData.id),
+				UnitID:    byte(playerData.ID),
 				XPosition: oldXPos,
 				YPosition: oldYPos,
 				Frame:     oldState.Frame}
@@ -411,14 +431,60 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedPlayerID
 			//log.Println("Sending pcm with frame: ", resp.Frame)
 
 			for _, v := range m.players {
-				if v.id == playerID {
-					m.network.sendCh <- &OutPkt{pc, v.ipAddr, resp.Encode()}
+				if v.ID == playerID {
+					m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: resp.Encode()}
 				}
 			}
 		}
 	}
 }
 
-func (m *Match) processPendingAbilityInputMsgs(pc net.PacketConn) {
-	
+func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.AbilityInputMsg) {
+	foundPlayer := false
+	for _, v := range m.players {
+		if v.ID == inputmsg.PlayerID {
+			foundPlayer = true
+			break
+		}
+	}
+
+	if !foundPlayer {
+		return
+	}
+
+	_, prs := m.abilities[inputmsg.PlayerID]
+
+	if prs {
+		// ability already active for player, a second one is not allowed
+		return
+	}
+
+	// make this better
+	// TODO: Check if player can use the abiity id
+
+	switch inputmsg.AbilityID {
+	case 0:
+		m.abilities[inputmsg.PlayerID] = abilities.WarriorMeeleAbility{}
+	}
+
+	var abilityData = abilities.AbilityData{
+		AbilityID:    inputmsg.AbilityID,
+		CasterUnitID: inputmsg.PlayerID,
+		Rotation:     inputmsg.Rotation,
+		StartFrame:   inputmsg.StartFrame}
+
+	abilityData = m.abilities[inputmsg.PlayerID].Init(abilityData)
+
+	abilityActMsg := msg.UnitAbilityActivationMsg{
+		MessageID:       msg.UnitAbilityActivationMsgID,
+		AbilityID:       inputmsg.AbilityID,
+		UnitID:          inputmsg.PlayerID,
+		Rotation:        inputmsg.Rotation,
+		StartFrame:      inputmsg.StartFrame,
+		ActivationFrame: abilityData.ActivationFrame,
+		EndFrame:        abilityData.EndFrame}
+
+	for _, v := range m.players {
+		m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: abilityActMsg.Encode()}
+	}
 }

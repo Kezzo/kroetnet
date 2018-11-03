@@ -1,4 +1,4 @@
-package main
+package player
 
 import (
 	"math"
@@ -12,13 +12,16 @@ var unitSpeed float64 = 400
 
 // Player details
 type Player struct {
-	ipAddr   net.Addr
-	id       int
+	IPAddr   net.Addr
+	ID       byte
 	X        int32
 	Y        int32
-	lastMsg  time.Time
-	rotation byte
+	LastMsg  time.Time
+	Rotation byte
 }
+
+// EmptyPlayer ...
+var EmptyPlayer = Player{}
 
 // GetPosition ...
 func GetPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte) (int32, int32) {
