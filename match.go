@@ -19,7 +19,7 @@ type Match struct {
 	StateChangeTimestamp  int64
 	recvCountMap          []bool
 	pendingInputMsgs      []msg.InputMsg
-	pendingSpellInputMsgs []msg.SpellInputMsg
+	pendingAbilityInputMsgs []msg.AbilityInputMsg
 	start                 time.Time
 	end                   time.Time
 	playerStateQueue      []Queue
@@ -36,7 +36,7 @@ func newMatch(playerCount, playerStateQueueCount int, port string) *Match {
 		network:              *newNetwork(port),
 		recvCountMap:         make([]bool, playerCount),
 		pendingInputMsgs:     make([]msg.InputMsg, 0, playerCount)
-		pendingSpellInputMsgs: make([]msg.SpellInputMsg, 0, playerCount)}
+		pendingAbilityInputMsgs: make([]msg.AbilityInputMsg, 0, playerCount)}
 }
 
 // Match server startup routines
@@ -128,7 +128,7 @@ func (m *Match) incFrame(t time.Time) {
 				}
 			}
 
-			m.processPendingSpellInputMsgs(m.network.connection)
+			m.processPendingAbilityInputMsgs(m.network.connection)
 		}
 	}
 }
@@ -189,8 +189,8 @@ func (m *Match) processMessages() {
 				m.handleInputMsg(pc, addr, buf)
 			}
 
-			if msgID == msg.SpellInputMsgID {
-				m.handleSpellInputMsg(pc, addr, buf)
+			if msgID == msg.AbilityInputMsgID {
+				m.handleAbilityInputMsg(pc, addr, buf)
 			}
 
 		case 3:
@@ -291,10 +291,10 @@ func (m *Match) handleInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
 	m.pendingInputMsgs = append(m.pendingInputMsgs, inputmsg)
 }
 
-func (m *Match) handleSpellInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
-	spellinputmsg := msg.DecodeSpellInputMsg(buf)
+func (m *Match) handleAbilityInputMsg(pc net.PacketConn, addr net.Addr, buf []byte) {
+	Abilityinputmsg := msg.DecodeAbilityInputMsg(buf)
 	//log.Println("Pkg Received: ", inputmsg)
-	m.pendingSpellInputMsgs = append(m.pendingSpellInputMsgs, spellinputmsg)
+	m.pendingAbilityInputMsgs = append(m.pendingAbilityInputMsgs, Abilityinputmsg)
 }
 
 func (m *Match) processPendingInputMsgs(pc net.PacketConn) {
@@ -419,6 +419,6 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedPlayerID
 	}
 }
 
-func (m *Match) processPendingSpellInputMsgs(pc net.PacketConn) {
-
+func (m *Match) processPendingAbilityInputMsgs(pc net.PacketConn) {
+	
 }
