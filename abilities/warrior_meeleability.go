@@ -22,7 +22,7 @@ func (a *WarriorMeeleAbility) Init(data AbilityData) AbilityData {
 	data.EndFrame = data.ActivationFrame
 	a.data = data
 
-	log.Println("Init with ActivationFrame: ", data.ActivationFrame, " EndFrame: ", data.EndFrame)
+	//log.Println("Init with ActivationFrame: ", data.ActivationFrame, " EndFrame: ", data.EndFrame)
 
 	return data
 }
@@ -30,7 +30,7 @@ func (a *WarriorMeeleAbility) Init(data AbilityData) AbilityData {
 // Tick ...
 func (a *WarriorMeeleAbility) Tick(players []player.Player, frame byte, updatedUnitIDs map[byte]bool) map[byte]bool {
 	if !a.triggered && utility.IsFrameNowOrInPast(a.data.ActivationFrame, frame) {
-		log.Println("Did trigger at: ", frame, " ActivationFrame: ", a.data.ActivationFrame)
+		//log.Println("Did trigger at: ", frame, " ActivationFrame: ", a.data.ActivationFrame)
 		// do damage
 		a.triggered = true
 		return updatedUnitIDs

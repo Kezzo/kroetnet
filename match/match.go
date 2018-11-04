@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"os"
 	"time"
 )
 
@@ -75,7 +76,7 @@ func (m *Match) checkStateDuration() {
 		}
 		if pingCounter == m.playerCount {
 			log.Println("All Players timed out -  EXIT")
-			//os.Exit(0)
+			os.Exit(0)
 		}
 	}
 
@@ -344,7 +345,7 @@ func (m *Match) updateAbilityStates(updatedUnitIDs map[byte]bool) map[byte]bool 
 		updatedUnitIDs = ability.Tick(m.players, m.Frame, updatedUnitIDs)
 
 		if !ability.IsActive(m.Frame) {
-			log.Println("Removed at: ", m.Frame)
+			//log.Println("Removed at: ", m.Frame)
 			m.abilities[playerID] = nil
 		}
 	}
@@ -487,9 +488,6 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 		StartFrame:   inputmsg.StartFrame}
 
 	abilityData = m.abilities[inputmsg.PlayerID].Init(abilityData)
-
-	var test = m.abilities[inputmsg.PlayerID]
-	log.Println(test)
 
 	abilityActMsg := msg.UnitAbilityActivationMsg{
 		MessageID:       msg.UnitAbilityActivationMsgID,
