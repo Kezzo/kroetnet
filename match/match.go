@@ -306,10 +306,10 @@ func (m *Match) updateMatchState(pc net.PacketConn) {
 				updatedUnitIDs = m.updatePlayerPosition(playerData, inputmsg, updatedUnitIDs)
 			}
 		}
-
-		// clear pending input msgs
-		m.pendingInputMsgs = make([]msg.InputMsg, 0, len(m.players))
 	}
+
+	// clear pending input msgs
+	m.pendingInputMsgs = make([]msg.InputMsg, 0, len(m.players))
 
 	for _, abilityinputmsg := range m.pendingAbilityInputMsgs {
 		for _, playerData := range m.players {
@@ -317,10 +317,10 @@ func (m *Match) updateMatchState(pc net.PacketConn) {
 				m.processPendingAbilityInputMsg(pc, abilityinputmsg)
 			}
 		}
-
-		// clear pending input msgs
-		m.pendingInputMsgs = make([]msg.InputMsg, 0, len(m.players))
 	}
+
+	// clear pending input msgs
+	m.pendingAbilityInputMsgs = make([]msg.AbilityInputMsg, 0, len(m.players))
 
 	updatedUnitIDs = m.updateAbilityStates(updatedUnitIDs)
 
@@ -329,9 +329,14 @@ func (m *Match) updateMatchState(pc net.PacketConn) {
 
 func (m *Match) updateAbilityStates(updatedUnitIDs map[byte]bool) map[byte]bool {
 	for playerID, ability := range m.abilities {
+		if ability == nil {
+			continue
+		}
+
 		updatedUnitIDs = ability.Tick(m.players, m.Frame, updatedUnitIDs)
 
 		if !ability.IsActive(m.Frame) {
+			log.Println("Removed at: ", m.Frame)
 			m.abilities[playerID] = nil
 		}
 	}
@@ -452,9 +457,9 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 		return
 	}
 
-	_, prs := m.abilities[inputmsg.PlayerID]
+	ability, prs := m.abilities[inputmsg.PlayerID]
 
-	if prs {
+	if prs && ability != nil {
 		// ability already active for player, a second one is not allowed
 		return
 	}
@@ -464,7 +469,7 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 
 	switch inputmsg.AbilityID {
 	case 0:
-		m.abilities[inputmsg.PlayerID] = abilities.WarriorMeeleAbility{}
+		m.abilities[inputmsg.PlayerID] = &abilities.WarriorMeeleAbility{}
 	}
 
 	var abilityData = abilities.AbilityData{
@@ -474,6 +479,9 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 		StartFrame:   inputmsg.StartFrame}
 
 	abilityData = m.abilities[inputmsg.PlayerID].Init(abilityData)
+
+	var test = m.abilities[inputmsg.PlayerID]
+	log.Println(test)
 
 	abilityActMsg := msg.UnitAbilityActivationMsg{
 		MessageID:       msg.UnitAbilityActivationMsgID,
