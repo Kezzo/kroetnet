@@ -493,6 +493,9 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 		EndFrame:        abilityData.EndFrame}
 
 	for _, v := range m.players {
-		m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: abilityActMsg.Encode()}
+		// don't send to sender of input msg
+		if v.ID != inputmsg.PlayerID {
+			m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: abilityActMsg.Encode()}
+		}
 	}
 }
