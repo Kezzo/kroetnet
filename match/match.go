@@ -221,8 +221,13 @@ func (m *Match) AddPlayer(addr net.Addr) int {
 	}
 
 	// player not in match yet & match not full
-	m.players = append(m.players, player.Player{ID: byte(len(m.players)), IPAddr: addr})
+	var playerID = byte(len(m.players))
+	var xPosition = -2800 * int32(playerID)
+	var playerData = player.Player{ID: playerID, X: xPosition, IPAddr: addr}
+
+	m.players = append(m.players, playerData)
 	m.playerStateQueue[len(m.players)-1] = *NewQueue(15)
+	m.playerStateQueue[len(m.players)-1].Push(&PastState{byte(0), playerData.X, playerData.Y, 127, 127})
 	return len(m.players) - 1
 }
 
@@ -240,6 +245,9 @@ func (m *Match) CheckMatchFull(pc net.PacketConn, addr net.Addr) {
 		m.start = time.Now()
 		m.end = time.Now().Add(time.Second * 300)
 		log.Println("Server started match")
+
+		time.Sleep(time.Millisecond * 100)
+		m.sendInitialUnitStates(pc)
 	}
 }
 
@@ -496,6 +504,35 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 		// don't send to sender of input msg
 		if v.ID != inputmsg.PlayerID {
 			m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: abilityActMsg.Encode()}
+		}
+	}
+}
+
+func (m *Match) sendInitialUnitStates(pc net.PacketConn) {
+	for _, playerData := range m.players {
+		// players state for all other clients
+		unitStateMsg := msg.UnitStateMsg{
+			MessageID: msg.UnitStateMsgID,
+			UnitID:    playerData.ID,
+			XPosition: playerData.X,
+			YPosition: playerData.Y,
+			Rotation:  playerData.Rotation,
+			Frame:     0}
+
+		postionConfirmationMsg := msg.PositionConfirmationMsg{
+			MessageID: msg.PositionConfirmationMsgID,
+			UnitID:    playerData.ID,
+			XPosition: playerData.X,
+			YPosition: playerData.Y,
+			Frame:     0}
+
+		// unitstate for all clients
+		for _, v := range m.players {
+			if v.ID == playerData.ID {
+				m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: postionConfirmationMsg.Encode()}
+			} else {
+				m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: unitStateMsg.Encode()}
+			}
 		}
 	}
 }
