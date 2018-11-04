@@ -409,7 +409,7 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs 
 		// players state for all other clients
 		unitstatemsg := msg.UnitStateMsg{
 			MessageID: msg.UnitStateMsgID,
-			UnitID:    byte(playerData.ID),
+			UnitID:    playerData.ID,
 			XPosition: playerData.X,
 			YPosition: playerData.Y,
 			Rotation:  playerData.Rotation,
@@ -428,7 +428,7 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs 
 
 			resp := msg.PositionConfirmationMsg{
 				MessageID: msg.PositionConfirmationMsgID,
-				UnitID:    byte(playerData.ID),
+				UnitID:    playerData.ID,
 				XPosition: oldXPos,
 				YPosition: oldYPos,
 				Frame:     oldState.Frame}
