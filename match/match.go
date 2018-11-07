@@ -69,8 +69,8 @@ func (m *Match) checkStateDuration() {
 	if m.State > 0 {
 		pingCounter := 0
 		for _, playerData := range m.players {
-			if (time.Now().Unix() - playerData.LastMsg.Unix()) > 5 {
-				// log.Println("Player with following id timed out: ", playerData.id)
+			if (time.Now().Unix() - playerData.LastMsg.Unix()) > 20 {
+				log.Println("Player with following id timed out: ", playerData.ID)
 				pingCounter++
 			}
 		}
