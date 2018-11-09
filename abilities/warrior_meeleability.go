@@ -13,7 +13,7 @@ type WarriorMeeleAbility struct {
 	triggered bool
 }
 
-var activationDelay = byte(18)
+var activationDelay = byte(10)
 var duration = byte(0)
 
 // Init ...
