@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// main goroutine
-	playerCount := 2
+	playerCount := 1
 	port := ":2448"
 
 	match := match.NewMatch(playerCount, 15, port)
