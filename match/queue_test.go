@@ -6,7 +6,7 @@ import (
 
 func TestQInit(t *testing.T) {
 	q := NewQueue(1)
-	if len(q.nodes) != 0 {
+	if len(q.nodes) != 1 {
 		t.Errorf("Failed to create Queue with given size")
 	}
 }

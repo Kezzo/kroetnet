@@ -1,63 +1,33 @@
 package player
 
 import (
-	"kroetnet/msg"
 	"testing"
+	"time"
 )
 
-func TestPlayerMoveX(t *testing.T) {
-	p := Player{nil, 16, 0, 0, 8}
-	im := msg.InputMsg{MessageID: 0,
-		PlayerID: 16, XTranslation: 255,
-		YTranslation: 0, Frame: 10}
-	x, y := p.move(im)
-	if x != 300 {
-		t.Errorf("Player Move returned a wrong x result")
-	}
-	if y != -300 {
-		t.Errorf("Player Move returned a wrong y result")
-	}
-}
+func TestPlayerMove(t *testing.T) {
+	p := Player{nil, 16, 0, 0, 8, time.Now()}
 
-func TestPlayerMoveY(t *testing.T) {
-	p := Player{nil, 16, 0, 0, 8}
-	im := msg.InputMsg{MessageID: 0,
-		PlayerID: 16, XTranslation: 0,
-		YTranslation: 255, Frame: 10}
-	x, y := p.move(im)
-	if x != -300 {
+	x, y := GetPosition(p.X, p.Y, 255, 127)
+	if x != 400 {
 		t.Errorf("Player Move returned a wrong x result")
 	}
-	if y != 300 {
-		t.Errorf("Player Move returned a wrong y result")
-	}
-}
-func TestPlayerMoveNegativeY(t *testing.T) {
-	p := Player{nil, 16, 0, 0, 8}
-	im := msg.InputMsg{MessageID: 0,
-		PlayerID: 16, XTranslation: 0,
-		YTranslation: 0, Frame: 10}
-	x, y := p.move(im)
-	if x != -300 {
-		t.Errorf("Player Move returned a wrong x result")
-	}
-	if y != -300 {
-		t.Errorf("Player Move returned a wrong y result")
-	}
-}
 
-func TestPlayerValidateStates(t *testing.T) {
-	p := Player{nil, 16, 0, 0, 8}
-	imArr := []msg.InputMsg{
-		{MessageID: 0, PlayerID: 16, XTranslation: 255, YTranslation: 0,
-			Rotation: 0, Frame: 10},
-		{MessageID: 0, PlayerID: 16, XTranslation: 0, YTranslation: 255,
-			Rotation: 0, Frame: 11}}
-	x, y := p.validateMoves(imArr)
-	if x != 0 {
-		t.Errorf("Player Move returned a wrong result")
+	x, y = GetPosition(p.X, p.Y, 127, 255)
+	if y != 400 {
+		t.Errorf("Player Move returned a wrong y result")
 	}
-	if y != 0 {
-		t.Errorf("Player Move returned a wrong result")
+}
+func TestPlayerMoveNegative(t *testing.T) {
+	p := Player{nil, 16, 0, 0, 8, time.Now()}
+
+	x, y := GetPosition(p.X, p.Y, 0, 127)
+	if x != -400 {
+		t.Errorf("Player Move returned a wrong x result")
+	}
+
+	x, y = GetPosition(p.X, p.Y, 127, 0)
+	if y != -400 {
+		t.Errorf("Player Move returned a wrong y result")
 	}
 }

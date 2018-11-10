@@ -16,8 +16,8 @@ type Player struct {
 	ID       byte
 	X        int32
 	Y        int32
-	LastMsg  time.Time
 	Rotation byte
+	LastMsg  time.Time
 }
 
 // EmptyPlayer ...

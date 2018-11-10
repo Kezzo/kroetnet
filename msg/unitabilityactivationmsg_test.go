@@ -6,7 +6,7 @@ import (
 
 func TestUnitAbilityActivationMsgEncodeDecode(t *testing.T) {
 
-	unitAbilityactivationmsg := UnitAbilityActivationMsg{UnitAbilityActivationMsgID, 2, 33, 230, 10, 20}
+	unitAbilityactivationmsg := UnitAbilityActivationMsg{UnitAbilityActivationMsgID, 2, 33, 230, 10, 20, 30}
 	encoded := unitAbilityactivationmsg.Encode()
 	decoded := DecodeUnitAbilityActivationMsg(encoded)
 	if unitAbilityactivationmsg != decoded {
