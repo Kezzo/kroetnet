@@ -1,4 +1,4 @@
-package player
+package units
 
 import (
 	"kroetnet/collision"
@@ -11,37 +11,59 @@ import (
 var xmax float64 = 24000
 var ymax float64 = 24000
 var unitSpeed float64 = 400
-var colliderSize int32 = 2000
+var colliderRadius int32 = 1000
 
 // Player details
 type Player struct {
-	IPAddr   net.Addr
 	ID       byte
+	Team     byte
 	X        int32
 	Y        int32
 	Rotation byte
-	LastMsg  time.Time
 	Collider collision.Collider
+	IPAddr   net.Addr
+	LastMsg  time.Time
 }
 
 // EmptyPlayer ...
 var EmptyPlayer = Player{}
 
 // NewPlayer ...
-func NewPlayer(ID byte, xPos int32, yPos int32, ipAddr net.Addr) *Player {
+func NewPlayer(ID byte, team byte, xPos int32, yPos int32, ipAddr net.Addr) *Player {
 	return &Player{
 		IPAddr:   ipAddr,
 		ID:       ID,
+		Team:     team,
 		X:        xPos,
 		Y:        yPos,
-		Collider: &collision.CircleCollider{Xpos: xPos, Ypos: yPos, Radius: colliderSize}}
+		Collider: &collision.CircleCollider{Xpos: xPos, Ypos: yPos, Radius: colliderRadius}}
+}
+
+// GetTeam ...
+func (p *Player) GetTeam() byte {
+	return p.Team
+}
+
+// GetCollider ...
+func (p *Player) GetCollider() collision.Collider {
+	return p.Collider
 }
 
 // GetPosition ...
-func GetPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte) (int32, int32) {
+func (p *Player) GetPosition() (int32, int32) {
+	return p.X, p.Y
+}
+
+// GetRotation ...
+func (p *Player) GetRotation() byte {
+	return p.Rotation
+}
+
+// GetPlayerPosition ...
+func GetPlayerPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte) (int32, int32) {
 	resX, resY := xPos, yPos
 
-	movX, movY := GetTranslation(xTranslation, yTranslation)
+	movX, movY := getTranslation(xTranslation, yTranslation)
 
 	resX = int32(math.Min(xmax, math.Max(-xmax, float64(resX+movX))))
 	resY = int32(math.Min(ymax, math.Max(-ymax, float64(resY+movY))))
@@ -49,8 +71,8 @@ func GetPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte) (
 	return resX, resY
 }
 
-// GetTranslation ...
-func GetTranslation(xTranslation byte, yTranslation byte) (int32, int32) {
+// getTranslation ...
+func getTranslation(xTranslation byte, yTranslation byte) (int32, int32) {
 	movX, movY := 0., 0.
 
 	if xTranslation != 127 {

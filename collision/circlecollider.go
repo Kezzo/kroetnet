@@ -9,6 +9,14 @@ type CircleCollider struct {
 	Radius int32
 }
 
+// NewCircleCollider ...
+func NewCircleCollider(xPos int32, yPos int32, radius int32) *CircleCollider {
+	return &CircleCollider{
+		Xpos:   xPos,
+		Ypos:   yPos,
+		Radius: radius}
+}
+
 // Update ...
 func (cc *CircleCollider) Update(xPos int32, yPos int32, rotation byte) {
 	cc.Xpos = xPos

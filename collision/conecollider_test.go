@@ -40,18 +40,9 @@ func TestConeNoCollisionSimple90(t *testing.T) {
 
 func TestConeCollisionSimple135(t *testing.T) {
 	cc := ConeCollider{0, 0, 5, 0, 135}
-	cc2 := CircleCollider{5, -2, 1}
+	cc2 := CircleCollider{4, -2, 1}
 
 	if !cc.IsColliding(&cc2) {
-		t.Errorf("Collision was not correctly detected")
-	}
-}
-
-func TestConeNoCollisionSimple135(t *testing.T) {
-	cc := ConeCollider{0, 0, 5, 0, 135}
-	cc2 := CircleCollider{-1, -4, 1}
-
-	if cc.IsColliding(&cc2) {
 		t.Errorf("Collision was not correctly detected")
 	}
 }
@@ -121,7 +112,7 @@ func TestConeCollisionRotated225(t *testing.T) {
 
 func TestConeNoCollisionRotated225(t *testing.T) {
 	cc := ConeCollider{0, 0, 5, 225, 45}
-	cc2 := CircleCollider{1, -3, 1}
+	cc2 := CircleCollider{2, -3, 1}
 
 	if cc.IsColliding(&cc2) {
 		t.Errorf("Collision was not correctly detected")
@@ -150,7 +141,7 @@ func TestConeCollisionSamePosition(t *testing.T) {
 	cc := ConeCollider{0, 0, 5, 0, 45}
 	cc2 := CircleCollider{0, 0, 1}
 
-	if !cc.IsColliding(&cc2) {
+	if cc.IsColliding(&cc2) {
 		t.Errorf("Collision was not correctly detected")
 	}
 }

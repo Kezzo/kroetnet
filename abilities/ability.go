@@ -1,10 +1,10 @@
 package abilities
 
-import "kroetnet/player"
+import "kroetnet/units"
 
 // Ability ...
 type Ability interface {
-	Init(data AbilityData) AbilityData
-	Tick(players []*player.Player, frame byte, updatedUnitIDs map[byte]bool) map[byte]bool
+	Init(data AbilityData, caster units.Unit) AbilityData
+	Tick(players []units.Unit, frame byte, updatedUnitIDs map[byte]bool) map[byte]bool
 	IsActive(currentFrame byte) bool
 }

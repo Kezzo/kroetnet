@@ -1,4 +1,4 @@
-package player
+package units
 
 import (
 	"testing"
@@ -6,27 +6,27 @@ import (
 )
 
 func TestPlayerMove(t *testing.T) {
-	p := Player{nil, 16, 0, 0, 8, time.Now()}
+	p := Player{0, 0, 0, 0, 8, nil, nil, time.Now()}
 
-	x, y := GetPosition(p.X, p.Y, 255, 127)
+	x, y := GetPlayerPosition(p.X, p.Y, 255, 127)
 	if x != 400 {
 		t.Errorf("Player Move returned a wrong x result")
 	}
 
-	x, y = GetPosition(p.X, p.Y, 127, 255)
+	x, y = GetPlayerPosition(p.X, p.Y, 127, 255)
 	if y != 400 {
 		t.Errorf("Player Move returned a wrong y result")
 	}
 }
 func TestPlayerMoveNegative(t *testing.T) {
-	p := Player{nil, 16, 0, 0, 8, time.Now()}
+	p := Player{0, 0, 0, 0, 8, nil, nil, time.Now()}
 
-	x, y := GetPosition(p.X, p.Y, 0, 127)
+	x, y := GetPlayerPosition(p.X, p.Y, 0, 127)
 	if x != -400 {
 		t.Errorf("Player Move returned a wrong x result")
 	}
 
-	x, y = GetPosition(p.X, p.Y, 127, 0)
+	x, y = GetPlayerPosition(p.X, p.Y, 127, 0)
 	if y != -400 {
 		t.Errorf("Player Move returned a wrong y result")
 	}

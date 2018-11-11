@@ -5,17 +5,17 @@ import (
 	"kroetnet/abilities"
 	"kroetnet/msg"
 	"kroetnet/network"
-	"kroetnet/player"
+	"kroetnet/units"
 	"log"
 	"math"
 	"net"
-	"os"
 	"time"
 )
 
 // Match ...
 type Match struct {
-	players                 []*player.Player
+	players                 []*units.Player
+	allUnits                []units.Unit
 	playerCount             int
 	State                   int
 	Frame                   byte
@@ -34,7 +34,8 @@ type Match struct {
 // NewMatch ...
 func NewMatch(playerCount, playerStateQueueCount int, port string) *Match {
 	return &Match{
-		players:                 make([]*player.Player, 0, playerCount),
+		players:                 make([]*units.Player, 0, playerCount),
+		allUnits:                make([]units.Unit, 0, playerCount),
 		playerCount:             playerCount,
 		playerStateQueue:        make([]Queue, playerStateQueueCount),
 		abilities:               make(map[byte]abilities.Ability),
@@ -76,7 +77,7 @@ func (m *Match) checkStateDuration() {
 		}
 		if pingCounter == m.playerCount {
 			log.Println("All Players timed out -  EXIT")
-			os.Exit(0)
+			//os.Exit(0)
 		}
 	}
 
@@ -121,7 +122,7 @@ func (m *Match) incFrame(t time.Time) {
 					lastState := m.playerStateQueue[playerData.ID].nodes[len(m.playerStateQueue[playerData.ID].nodes)-1]
 					nextPosX, nextPosY := int32(0), int32(0)
 					if lastState != nil {
-						nextPosX, nextPosY = player.GetPosition(lastState.Xpos, lastState.Ypos, lastState.Xtrans, lastState.Ytrans)
+						nextPosX, nextPosY = units.GetPlayerPosition(lastState.Xpos, lastState.Ypos, lastState.Xtrans, lastState.Ytrans)
 					}
 
 					m.playerStateQueue[playerData.ID].Push(&PastState{byte(m.Frame), nextPosX, nextPosY, 127, 127})
@@ -224,7 +225,10 @@ func (m *Match) AddPlayer(addr net.Addr) int {
 	// player not in match yet & match not full
 	var playerID = byte(len(m.players))
 	var xPosition = -2800 * int32(playerID)
-	var playerData = player.NewPlayer(playerID, xPosition, 0, addr)
+	// put players in different teams to allow pvp
+	// TODO: Remove this later
+	var playerData = units.NewPlayer(playerID, playerID, xPosition, 0, addr)
+	m.allUnits = append(m.allUnits, playerData)
 
 	m.players = append(m.players, playerData)
 	m.playerStateQueue[len(m.players)-1] = *NewQueue(15)
@@ -342,7 +346,7 @@ func (m *Match) updateAbilityStates(updatedUnitIDs map[byte]bool) map[byte]bool 
 			continue
 		}
 
-		updatedUnitIDs = ability.Tick(m.players, m.Frame, updatedUnitIDs)
+		updatedUnitIDs = ability.Tick(m.allUnits, m.Frame, updatedUnitIDs)
 
 		if !ability.IsActive(m.Frame) {
 			//log.Println("Removed at: ", m.Frame)
@@ -353,7 +357,7 @@ func (m *Match) updateAbilityStates(updatedUnitIDs map[byte]bool) map[byte]bool 
 	return updatedUnitIDs
 }
 
-func (m *Match) updatePlayerPosition(playerData *player.Player, inputmsg msg.InputMsg, updatedUnitIDs map[byte]bool) map[byte]bool {
+func (m *Match) updatePlayerPosition(playerData *units.Player, inputmsg msg.InputMsg, updatedUnitIDs map[byte]bool) map[byte]bool {
 	foundFrame := false
 	for _, pastState := range m.playerStateQueue[playerData.ID].nodes {
 		if pastState != nil {
@@ -392,14 +396,14 @@ func (m *Match) updatePlayerPosition(playerData *player.Player, inputmsg msg.Inp
 			prevXTrans := node.Xtrans
 			prevYTrans := node.Ytrans
 
-			updXPos, updYPos := player.GetPosition(prevXPos, prevYPos, prevXTrans, prevYTrans)
+			updXPos, updYPos := units.GetPlayerPosition(prevXPos, prevYPos, prevXTrans, prevYTrans)
 			pastState.Xpos, pastState.Ypos = updXPos, updYPos
 		}
 	}
 
 	latestNode := m.playerStateQueue[playerData.ID].nodes[len(m.playerStateQueue[playerData.ID].nodes)-1]
 	// validate move
-	m.players[playerData.ID].X, m.players[playerData.ID].Y = player.GetPosition(
+	m.players[playerData.ID].X, m.players[playerData.ID].Y = units.GetPlayerPosition(
 		latestNode.Xpos, latestNode.Ypos, latestNode.Xtrans, latestNode.Ytrans)
 	m.players[playerData.ID].Rotation = inputmsg.Rotation
 
@@ -435,7 +439,7 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs 
 
 		if m.playerStateQueue[playerData.ID].nodes[0] != nil {
 			oldState := m.playerStateQueue[playerData.ID].nodes[0]
-			oldXPos, oldYPos := player.GetPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
+			oldXPos, oldYPos := units.GetPlayerPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
 
 			resp := msg.PositionConfirmationMsg{
 				MessageID: msg.PositionConfirmationMsgID,
@@ -456,15 +460,15 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs 
 }
 
 func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.AbilityInputMsg) {
-	foundPlayer := false
+	playerData := &units.EmptyPlayer
 	for _, v := range m.players {
 		if v.ID == inputmsg.PlayerID {
-			foundPlayer = true
+			playerData = v
 			break
 		}
 	}
 
-	if !foundPlayer {
+	if playerData == &units.EmptyPlayer {
 		return
 	}
 
@@ -489,7 +493,7 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 		Rotation:     inputmsg.Rotation,
 		StartFrame:   inputmsg.StartFrame}
 
-	abilityData = m.abilities[inputmsg.PlayerID].Init(abilityData)
+	abilityData = m.abilities[inputmsg.PlayerID].Init(abilityData, playerData)
 
 	abilityActMsg := msg.UnitAbilityActivationMsg{
 		MessageID:       msg.UnitAbilityActivationMsgID,
