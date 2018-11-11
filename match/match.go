@@ -15,7 +15,7 @@ import (
 
 // Match ...
 type Match struct {
-	players                 []player.Player
+	players                 []*player.Player
 	playerCount             int
 	State                   int
 	Frame                   byte
@@ -34,7 +34,7 @@ type Match struct {
 // NewMatch ...
 func NewMatch(playerCount, playerStateQueueCount int, port string) *Match {
 	return &Match{
-		players:                 make([]player.Player, 0, playerCount),
+		players:                 make([]*player.Player, 0, playerCount),
 		playerCount:             playerCount,
 		playerStateQueue:        make([]Queue, playerStateQueueCount),
 		abilities:               make(map[byte]abilities.Ability),
@@ -224,7 +224,7 @@ func (m *Match) AddPlayer(addr net.Addr) int {
 	// player not in match yet & match not full
 	var playerID = byte(len(m.players))
 	var xPosition = -2800 * int32(playerID)
-	var playerData = player.Player{ID: playerID, X: xPosition, IPAddr: addr}
+	var playerData = player.NewPlayer(playerID, xPosition, 0, addr)
 
 	m.players = append(m.players, playerData)
 	m.playerStateQueue[len(m.players)-1] = *NewQueue(15)
@@ -353,7 +353,7 @@ func (m *Match) updateAbilityStates(updatedUnitIDs map[byte]bool) map[byte]bool 
 	return updatedUnitIDs
 }
 
-func (m *Match) updatePlayerPosition(playerData player.Player, inputmsg msg.InputMsg, updatedUnitIDs map[byte]bool) map[byte]bool {
+func (m *Match) updatePlayerPosition(playerData *player.Player, inputmsg msg.InputMsg, updatedUnitIDs map[byte]bool) map[byte]bool {
 	foundFrame := false
 	for _, pastState := range m.playerStateQueue[playerData.ID].nodes {
 		if pastState != nil {
@@ -402,6 +402,8 @@ func (m *Match) updatePlayerPosition(playerData player.Player, inputmsg msg.Inpu
 	m.players[playerData.ID].X, m.players[playerData.ID].Y = player.GetPosition(
 		latestNode.Xpos, latestNode.Ypos, latestNode.Xtrans, latestNode.Ytrans)
 	m.players[playerData.ID].Rotation = inputmsg.Rotation
+
+	m.players[playerData.ID].Collider.Update(m.players[playerData.ID].X, m.players[playerData.ID].Y, m.players[playerData.ID].Rotation)
 
 	updatedUnitIDs[playerData.ID] = true
 

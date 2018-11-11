@@ -28,7 +28,7 @@ func (a *WarriorMeeleAbility) Init(data AbilityData) AbilityData {
 }
 
 // Tick ...
-func (a *WarriorMeeleAbility) Tick(players []player.Player, frame byte, updatedUnitIDs map[byte]bool) map[byte]bool {
+func (a *WarriorMeeleAbility) Tick(players []*player.Player, frame byte, updatedUnitIDs map[byte]bool) map[byte]bool {
 	if !a.triggered && utility.IsFrameNowOrInPast(a.data.ActivationFrame, frame) {
 		//log.Println("Did trigger at: ", frame, " ActivationFrame: ", a.data.ActivationFrame)
 		// do damage

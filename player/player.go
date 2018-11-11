@@ -1,6 +1,7 @@
 package player
 
 import (
+	"kroetnet/collision"
 	"kroetnet/utility"
 	"math"
 	"net"
@@ -10,6 +11,7 @@ import (
 var xmax float64 = 24000
 var ymax float64 = 24000
 var unitSpeed float64 = 400
+var colliderSize int32 = 2000
 
 // Player details
 type Player struct {
@@ -19,10 +21,21 @@ type Player struct {
 	Y        int32
 	Rotation byte
 	LastMsg  time.Time
+	Collider collision.Collider
 }
 
 // EmptyPlayer ...
 var EmptyPlayer = Player{}
+
+// NewPlayer ...
+func NewPlayer(ID byte, xPos int32, yPos int32, ipAddr net.Addr) *Player {
+	return &Player{
+		IPAddr:   ipAddr,
+		ID:       ID,
+		X:        xPos,
+		Y:        yPos,
+		Collider: &collision.CircleCollider{Xpos: xPos, Ypos: yPos, Radius: colliderSize}}
+}
 
 // GetPosition ...
 func GetPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte) (int32, int32) {
