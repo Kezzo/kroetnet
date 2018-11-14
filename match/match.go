@@ -9,6 +9,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"os"
 	"time"
 )
 
@@ -77,7 +78,7 @@ func (m *Match) checkStateDuration() {
 		}
 		if pingCounter == m.playerCount {
 			log.Println("All Players timed out -  EXIT")
-			//os.Exit(0)
+			os.Exit(0)
 		}
 	}
 
@@ -423,18 +424,18 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs 
 		playerData := m.players[playerID]
 		// players state for all other clients
 		unitstatemsg := msg.UnitStateMsg{
-			MessageID: msg.UnitStateMsgID,
-			UnitID:    playerData.ID,
-			XPosition: playerData.X,
-			YPosition: playerData.Y,
-			Rotation:  playerData.Rotation,
-			Frame:     m.Frame}
+			MessageID:     msg.UnitStateMsgID,
+			UnitID:        playerData.ID,
+			XPosition:     playerData.X,
+			YPosition:     playerData.Y,
+			Rotation:      playerData.Rotation,
+			HealthPercent: byte(playerData.HealthPercent),
+			Frame:         m.Frame}
 
 		// unitstate for all clients
 		for _, v := range m.players {
-			if v.ID != playerID {
-				m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: unitstatemsg.Encode()}
-			}
+			// optimize this: split position/rotation mesage from general state messages?
+			m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: unitstatemsg.Encode()}
 		}
 
 		if m.playerStateQueue[playerData.ID].nodes[0] != nil {
@@ -516,12 +517,13 @@ func (m *Match) sendInitialUnitStates(pc net.PacketConn) {
 	for _, playerData := range m.players {
 		// players state for all other clients
 		unitStateMsg := msg.UnitStateMsg{
-			MessageID: msg.UnitStateMsgID,
-			UnitID:    playerData.ID,
-			XPosition: playerData.X,
-			YPosition: playerData.Y,
-			Rotation:  playerData.Rotation,
-			Frame:     0}
+			MessageID:     msg.UnitStateMsgID,
+			UnitID:        playerData.ID,
+			XPosition:     playerData.X,
+			YPosition:     playerData.Y,
+			Rotation:      playerData.Rotation,
+			HealthPercent: byte(playerData.HealthPercent),
+			Frame:         0}
 
 		postionConfirmationMsg := msg.PositionConfirmationMsg{
 			MessageID: msg.PositionConfirmationMsgID,

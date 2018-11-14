@@ -48,6 +48,9 @@ func (a *WarriorMeeleAbility) Tick(units []units.Unit, frame byte, updatedUnitID
 
 			if abilityCollider.IsColliding(unitData.GetCollider()) {
 				log.Println("WarriorMeeleAbility collided with unit of team: ", unitData.GetTeam())
+
+				unitData.AddDamage(30)
+				updatedUnitIDs[unitData.GetID()] = true
 			}
 		}
 

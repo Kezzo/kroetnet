@@ -4,12 +4,18 @@ import "kroetnet/collision"
 
 // NPCUnit ...
 type NPCUnit struct {
-	ID       byte
-	Team     byte
-	X        int32
-	Y        int32
-	Rotation byte
-	Collider collision.Collider
+	ID            byte
+	Team          byte
+	X             int32
+	Y             int32
+	Rotation      byte
+	HealthPercent int32
+	Collider      collision.Collider
+}
+
+// GetID ...
+func (npc *NPCUnit) GetID() byte {
+	return npc.ID
 }
 
 // GetTeam ...
@@ -30,4 +36,16 @@ func (npc *NPCUnit) GetPosition() (int32, int32) {
 // GetRotation ...
 func (npc *NPCUnit) GetRotation() byte {
 	return npc.Rotation
+}
+
+// AddDamage ...
+func (npc *NPCUnit) AddDamage(damageToAdd int32) {
+	newHealth := npc.HealthPercent - damageToAdd
+
+	if newHealth <= 0 {
+		newHealth = 0
+		// dead
+	}
+
+	npc.HealthPercent = newHealth
 }

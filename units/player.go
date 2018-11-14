@@ -15,14 +15,15 @@ var colliderRadius int32 = 1000
 
 // Player details
 type Player struct {
-	ID       byte
-	Team     byte
-	X        int32
-	Y        int32
-	Rotation byte
-	Collider collision.Collider
-	IPAddr   net.Addr
-	LastMsg  time.Time
+	ID            byte
+	Team          byte
+	X             int32
+	Y             int32
+	Rotation      byte
+	HealthPercent int32
+	Collider      collision.Collider
+	IPAddr        net.Addr
+	LastMsg       time.Time
 }
 
 // EmptyPlayer ...
@@ -31,12 +32,18 @@ var EmptyPlayer = Player{}
 // NewPlayer ...
 func NewPlayer(ID byte, team byte, xPos int32, yPos int32, ipAddr net.Addr) *Player {
 	return &Player{
-		IPAddr:   ipAddr,
-		ID:       ID,
-		Team:     team,
-		X:        xPos,
-		Y:        yPos,
-		Collider: &collision.CircleCollider{Xpos: xPos, Ypos: yPos, Radius: colliderRadius}}
+		IPAddr:        ipAddr,
+		ID:            ID,
+		Team:          team,
+		X:             xPos,
+		Y:             yPos,
+		HealthPercent: 100,
+		Collider:      &collision.CircleCollider{Xpos: xPos, Ypos: yPos, Radius: colliderRadius}}
+}
+
+// GetID ...
+func (p *Player) GetID() byte {
+	return p.ID
 }
 
 // GetTeam ...
@@ -57,6 +64,18 @@ func (p *Player) GetPosition() (int32, int32) {
 // GetRotation ...
 func (p *Player) GetRotation() byte {
 	return p.Rotation
+}
+
+// AddDamage ...
+func (p *Player) AddDamage(damageToAdd int32) {
+	newHealth := p.HealthPercent - damageToAdd
+
+	if newHealth <= 0 {
+		newHealth = 0
+		// dead
+	}
+
+	p.HealthPercent = newHealth
 }
 
 // GetPlayerPosition ...

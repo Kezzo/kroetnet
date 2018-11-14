@@ -5,8 +5,7 @@ import (
 )
 
 func TestUnitStateMsgEncodeDecode(t *testing.T) {
-
-	unitstatemsg := UnitStateMsg{UnitStateMsgID, 125, 43857, -1345300, 230, 10}
+	unitstatemsg := UnitStateMsg{UnitStateMsgID, 125, 43857, -1345300, 230, 50, 10}
 	encoded := unitstatemsg.Encode()
 	decoded := DecodeUnitStateMsg(encoded)
 	if unitstatemsg != decoded {
