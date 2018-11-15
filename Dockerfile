@@ -3,5 +3,5 @@ FROM busybox
 
 ADD main ./
 
-EXPOSE 2448/udp
+EXPOSE 2448/udp 8888
 CMD ["/main"]
