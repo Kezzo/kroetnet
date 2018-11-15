@@ -215,6 +215,7 @@ func (m *Match) processMessages() {
 
 // AddPlayer adds servers to the match
 func (m *Match) AddPlayer(addr net.Addr) int {
+
 	for i := 0; i < len(m.players); i++ {
 		playerToCheck := m.players[i].IPAddr.String()
 		incomingAddr := addr.String()

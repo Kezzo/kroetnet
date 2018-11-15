@@ -38,7 +38,8 @@ func NewPlayer(ID byte, team byte, xPos int32, yPos int32, ipAddr net.Addr) *Pla
 		X:             xPos,
 		Y:             yPos,
 		HealthPercent: 100,
-		Collider:      &collision.CircleCollider{Xpos: xPos, Ypos: yPos, Radius: colliderRadius}}
+		Collider:      &collision.CircleCollider{Xpos: xPos, Ypos: yPos, Radius: colliderRadius},
+		LastMsg:       time.Now().Add(time.Second * 5)}
 }
 
 // GetID ...
