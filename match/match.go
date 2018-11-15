@@ -71,7 +71,7 @@ func (m *Match) checkStateDuration() {
 	if m.State > 0 {
 		pingCounter := 0
 		for _, playerData := range m.players {
-			if (time.Now().Unix() - playerData.LastMsg.Unix()) > 20 {
+			if (time.Now().Unix() - playerData.LastMsg.Unix()) > 5 {
 				log.Println("Player with following id timed out: ", playerData.ID)
 				pingCounter++
 			}
@@ -85,18 +85,19 @@ func (m *Match) checkStateDuration() {
 	// if no ack is received for 5 seconds
 	if time.Now().Unix()-m.StateChangeTimestamp > 5 {
 		if m.State == 1 {
-			// rollback to timesync state
-			log.Println("ROLLBACK from State 1 to 0")
-			m.State--
-			// reset players joined
+			// kill match is easier than rollback
+			m.endMatch = true
 		}
 	}
 	if m.State == 2 && (time.Now().After(m.end)) {
 		for _, v := range m.players {
-			log.Println("SEND MATCH END to Player ", v.ID)
-			matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
-			m.network.SendCh <- &network.OutPkt{Connection: m.network.Connection,
-				Addr: v.IPAddr, Buffer: matchendmsg.Encode()}
+			// send 3 times
+			for i := 0; i < 3; i++ {
+				log.Println("SEND MATCH END to Player ", v.ID)
+				matchendmsg := msg.MatchEndMsg{MessageID: msg.MatchEndMsgID}
+				m.network.SendCh <- &network.OutPkt{Connection: m.network.Connection,
+					Addr: v.IPAddr, Buffer: matchendmsg.Encode()}
+			}
 		}
 		m.State = 3
 	}
