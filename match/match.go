@@ -498,6 +498,8 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 
 	abilityData = m.abilities[inputmsg.PlayerID].Init(abilityData, playerData)
 
+	m.players[playerData.ID].Rotation = inputmsg.Rotation
+
 	abilityActMsg := msg.UnitAbilityActivationMsg{
 		MessageID:       msg.UnitAbilityActivationMsgID,
 		AbilityID:       inputmsg.AbilityID,
