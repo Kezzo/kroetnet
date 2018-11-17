@@ -79,6 +79,16 @@ func (p *Player) AddDamage(damageToAdd int32) {
 	p.HealthPercent = newHealth
 }
 
+// GetHealthPercent ...
+func (p *Player) GetHealthPercent() int32 {
+	return p.HealthPercent
+}
+
+// IsPlayer ...
+func (p *Player) IsPlayer() bool {
+	return true
+}
+
 // GetPlayerPosition ...
 func GetPlayerPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte) (int32, int32) {
 	resX, resY := xPos, yPos

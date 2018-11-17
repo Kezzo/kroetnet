@@ -518,29 +518,34 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 }
 
 func (m *Match) sendInitialUnitStates(pc net.PacketConn) {
-	for _, playerData := range m.players {
+	for _, unitData := range m.allUnits {
+
+		x, y := unitData.GetPosition()
 		// players state for all other clients
 		unitStateMsg := msg.UnitStateMsg{
 			MessageID:     msg.UnitStateMsgID,
-			UnitID:        playerData.ID,
-			XPosition:     playerData.X,
-			YPosition:     playerData.Y,
-			Rotation:      playerData.Rotation,
-			HealthPercent: byte(playerData.HealthPercent),
+			UnitID:        unitData.GetID(),
+			XPosition:     x,
+			YPosition:     y,
+			Rotation:      unitData.GetRotation(),
+			HealthPercent: byte(unitData.GetHealthPercent()),
 			Frame:         0}
 
-		postionConfirmationMsg := msg.PositionConfirmationMsg{
-			MessageID: msg.PositionConfirmationMsgID,
-			UnitID:    playerData.ID,
-			XPosition: playerData.X,
-			YPosition: playerData.Y,
-			Frame:     0}
+		if unitData.IsPlayer() {
+			postionConfirmationMsg := msg.PositionConfirmationMsg{
+				MessageID: msg.PositionConfirmationMsgID,
+				UnitID:    unitData.GetID(),
+				XPosition: x,
+				YPosition: y,
+				Frame:     0}
+
+			m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: m.players[unitData.GetID()].IPAddr,
+				Buffer: postionConfirmationMsg.Encode()}
+		}
 
 		// unitstate for all clients
 		for _, v := range m.players {
-			if v.ID == playerData.ID {
-				m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: postionConfirmationMsg.Encode()}
-			} else {
+			if v.ID != unitData.GetID() {
 				m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: unitStateMsg.Encode()}
 			}
 		}

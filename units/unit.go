@@ -10,4 +10,6 @@ type Unit interface {
 	GetPosition() (int32, int32)
 	GetRotation() byte
 	AddDamage(damageToAdd int32)
+	GetHealthPercent() int32
+	IsPlayer() bool
 }

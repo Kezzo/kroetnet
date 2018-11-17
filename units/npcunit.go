@@ -49,3 +49,13 @@ func (npc *NPCUnit) AddDamage(damageToAdd int32) {
 
 	npc.HealthPercent = newHealth
 }
+
+// GetHealthPercent ...
+func (npc *NPCUnit) GetHealthPercent() int32 {
+	return npc.HealthPercent
+}
+
+// IsPlayer ...
+func (npc *NPCUnit) IsPlayer() bool {
+	return false
+}
