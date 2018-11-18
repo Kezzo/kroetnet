@@ -3,6 +3,7 @@ package match
 import (
 	"encoding/binary"
 	"kroetnet/abilities"
+	"kroetnet/collision"
 	"kroetnet/msg"
 	"kroetnet/network"
 	"kroetnet/units"
@@ -16,6 +17,7 @@ import (
 // Match ...
 type Match struct {
 	players                 []*units.Player
+	npcUnits                []*units.NPCUnit
 	allUnits                []units.Unit
 	playerCount             int
 	State                   int
@@ -36,6 +38,7 @@ type Match struct {
 func NewMatch(playerCount, playerStateQueueCount int, port string) *Match {
 	return &Match{
 		players:                 make([]*units.Player, 0, playerCount),
+		npcUnits:                make([]*units.NPCUnit, 0, playerCount),
 		allUnits:                make([]units.Unit, 0, playerCount),
 		playerCount:             playerCount,
 		playerStateQueue:        make([]Queue, playerStateQueueCount),
@@ -230,7 +233,7 @@ func (m *Match) AddPlayer(addr net.Addr) int {
 	var xPosition = -2800 * int32(playerID)
 	// put players in different teams to allow pvp
 	// TODO: Remove this later
-	var playerData = units.NewPlayer(playerID, playerID, xPosition, 0, addr)
+	var playerData = units.NewPlayer(playerID, 0, xPosition, 0, addr)
 	m.allUnits = append(m.allUnits, playerData)
 
 	m.players = append(m.players, playerData)
@@ -254,8 +257,45 @@ func (m *Match) CheckMatchFull(pc net.PacketConn, addr net.Addr) {
 		m.end = time.Now().Add(time.Second * 300)
 		log.Println("Server started match")
 
+		m.addInitialNPCUnits()
+
 		time.Sleep(time.Millisecond * 100)
 		m.sendInitialUnitStates(pc)
+	}
+}
+
+// TODO: make this more generic
+func (m *Match) addInitialNPCUnits() {
+	for i := 0; i < 4; i++ {
+		var x, y int32
+		y = -18000
+
+		switch i {
+		case 0:
+			x = 3000
+			break
+		case 1:
+			x = -3000
+			break
+		case 2:
+			x = 6000
+			break
+		case 3:
+			x = -6000
+			break
+		}
+
+		npcUnitData := &units.NPCUnit{
+			ID:            byte(i + 3),
+			Team:          1,
+			X:             x,
+			Y:             y,
+			Rotation:      0,
+			HealthPercent: 100,
+			Collider:      &collision.CircleCollider{Xpos: x, Ypos: y, Radius: 1000}}
+
+		m.npcUnits = append(m.npcUnits, npcUnitData)
+		m.allUnits = append(m.allUnits, npcUnitData)
 	}
 }
 
@@ -341,7 +381,7 @@ func (m *Match) updateMatchState(pc net.PacketConn) {
 
 	updatedUnitIDs = m.updateAbilityStates(updatedUnitIDs)
 
-	m.sendMessagesForUpdatedPlayers(pc, updatedUnitIDs)
+	m.sendMessagesForUpdatedUnits(pc, updatedUnitIDs)
 }
 
 func (m *Match) updateAbilityStates(updatedUnitIDs map[byte]bool) map[byte]bool {
@@ -418,21 +458,38 @@ func (m *Match) updatePlayerPosition(playerData *units.Player, inputmsg msg.Inpu
 	return updatedUnitIDs
 }
 
-func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs map[byte]bool) {
-	for playerID, isUpdated := range updatedUnitIDs {
+func (m *Match) sendMessagesForUpdatedUnits(pc net.PacketConn, updatedUnitIDs map[byte]bool) {
+	for unitID, isUpdated := range updatedUnitIDs {
 		if !isUpdated {
 			continue
 		}
 
-		playerData := m.players[playerID]
+		var unitData units.Unit
+		unitFound := false
+
+		for _, unitDataToCheck := range m.allUnits {
+			if unitDataToCheck.GetID() == unitID {
+				unitData = unitDataToCheck
+				unitFound = true
+				break
+			}
+		}
+
+		if !unitFound {
+			log.Println("Did not find unit with ID: ", unitID)
+			continue
+		}
+
+		x, y := unitData.GetPosition()
+
 		// players state for all other clients
 		unitstatemsg := msg.UnitStateMsg{
 			MessageID:     msg.UnitStateMsgID,
-			UnitID:        playerData.ID,
-			XPosition:     playerData.X,
-			YPosition:     playerData.Y,
-			Rotation:      playerData.Rotation,
-			HealthPercent: byte(playerData.HealthPercent),
+			UnitID:        unitData.GetID(),
+			XPosition:     x,
+			YPosition:     y,
+			Rotation:      unitData.GetRotation(),
+			HealthPercent: byte(unitData.GetHealthPercent()),
 			Frame:         m.Frame}
 
 		// unitstate for all clients
@@ -441,13 +498,13 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs 
 			m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: unitstatemsg.Encode()}
 		}
 
-		if m.playerStateQueue[playerData.ID].nodes[0] != nil {
-			oldState := m.playerStateQueue[playerData.ID].nodes[0]
+		if unitData.IsPlayer() && m.playerStateQueue[unitData.GetID()].nodes[0] != nil {
+			oldState := m.playerStateQueue[unitData.GetID()].nodes[0]
 			oldXPos, oldYPos := units.GetPlayerPosition(oldState.Xpos, oldState.Ypos, oldState.Xtrans, oldState.Ytrans)
 
 			resp := msg.PositionConfirmationMsg{
 				MessageID: msg.PositionConfirmationMsgID,
-				UnitID:    playerData.ID,
+				UnitID:    unitData.GetID(),
 				XPosition: oldXPos,
 				YPosition: oldYPos,
 				Frame:     oldState.Frame}
@@ -455,7 +512,7 @@ func (m *Match) sendMessagesForUpdatedPlayers(pc net.PacketConn, updatedUnitIDs 
 			//log.Println("Sending pcm with frame: ", resp.Frame)
 
 			for _, v := range m.players {
-				if v.ID == playerID {
+				if v.ID == unitData.GetID() {
 					m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: resp.Encode()}
 				}
 			}
