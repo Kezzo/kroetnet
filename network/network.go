@@ -39,9 +39,9 @@ func NewNetwork(port string) *Network {
 // SendByteResponse ...
 func (n *Network) SendByteResponse() {
 	for v := range n.SendCh {
-		if v.Buffer[0] != 1 {
+		/*if v.Buffer[0] != 1 {
 			log.Println("Sending buffer ", v.Buffer, " to ", v.Addr)
-		}
+		}*/
 		if _, err := v.Connection.WriteTo(v.Buffer, v.Addr); err != nil {
 			log.Fatalln("err sending data for msgID :", v.Buffer[0], err)
 		}
@@ -70,9 +70,9 @@ func (n *Network) ListenUDP() {
 
 		num, addr, err := pc.ReadFrom(buf)
 
-		if buf[0] != 0 {
-			log.Println("Received buffer ", buf[:num], " from ", addr)
-		}
+		//if buf[0] != 0 {
+		log.Println("Received buffer ", buf[:num], " from ", addr)
+		//}
 
 		if err != nil {
 			log.Print("Error: ", err)
