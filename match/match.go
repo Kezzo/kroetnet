@@ -233,7 +233,7 @@ func (m *Match) AddPlayer(addr net.Addr) int {
 	var xPosition = -2800 * int32(playerID)
 	// put players in different teams to allow pvp
 	// TODO: Remove this later
-	var playerData = units.NewPlayer(playerID, 0, xPosition, 0, addr)
+	var playerData = units.NewPlayer(playerID, 0, playerID, xPosition, 0, addr)
 	m.allUnits = append(m.allUnits, playerData)
 
 	m.players = append(m.players, playerData)
@@ -260,7 +260,7 @@ func (m *Match) CheckMatchFull(pc net.PacketConn, addr net.Addr) {
 		m.addInitialNPCUnits()
 
 		time.Sleep(time.Millisecond * 100)
-		m.sendInitialUnitStates(pc)
+		m.spawnInitialUnits(pc)
 	}
 }
 
@@ -288,6 +288,7 @@ func (m *Match) addInitialNPCUnits() {
 		npcUnitData := &units.NPCUnit{
 			ID:            byte(i + 3),
 			Team:          1,
+			UnitType:      3,
 			X:             x,
 			Y:             y,
 			Rotation:      0,
@@ -575,37 +576,25 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 	}
 }
 
-func (m *Match) sendInitialUnitStates(pc net.PacketConn) {
+func (m *Match) spawnInitialUnits(pc net.PacketConn) {
 	for _, unitData := range m.allUnits {
 
 		x, y := unitData.GetPosition()
 		// players state for all other clients
-		unitStateMsg := msg.UnitStateMsg{
-			MessageID:     msg.UnitStateMsgID,
+		unitSpawnMsg := msg.UnitSpawnMsg{
+			MessageID:     msg.UnitSpawnMsgID,
 			UnitID:        unitData.GetID(),
+			TeamID:        unitData.GetTeam(),
+			UnitType:      unitData.GetUnitType(),
 			XPosition:     x,
 			YPosition:     y,
 			Rotation:      unitData.GetRotation(),
 			HealthPercent: byte(unitData.GetHealthPercent()),
 			Frame:         0}
 
-		if unitData.IsPlayer() {
-			postionConfirmationMsg := msg.PositionConfirmationMsg{
-				MessageID: msg.PositionConfirmationMsgID,
-				UnitID:    unitData.GetID(),
-				XPosition: x,
-				YPosition: y,
-				Frame:     0}
-
-			m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: m.players[unitData.GetID()].IPAddr,
-				Buffer: postionConfirmationMsg.Encode()}
-		}
-
 		// unitstate for all clients
 		for _, v := range m.players {
-			if v.ID != unitData.GetID() {
-				m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: unitStateMsg.Encode()}
-			}
+			m.network.SendCh <- &network.OutPkt{Connection: pc, Addr: v.IPAddr, Buffer: unitSpawnMsg.Encode()}
 		}
 	}
 }

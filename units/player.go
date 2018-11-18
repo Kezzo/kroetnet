@@ -17,6 +17,7 @@ var colliderRadius int32 = 1000
 type Player struct {
 	ID            byte
 	Team          byte
+	UnitType      byte
 	X             int32
 	Y             int32
 	Rotation      byte
@@ -30,11 +31,12 @@ type Player struct {
 var EmptyPlayer = Player{}
 
 // NewPlayer ...
-func NewPlayer(ID byte, team byte, xPos int32, yPos int32, ipAddr net.Addr) *Player {
+func NewPlayer(ID byte, team byte, unitType byte, xPos int32, yPos int32, ipAddr net.Addr) *Player {
 	return &Player{
 		IPAddr:        ipAddr,
 		ID:            ID,
 		Team:          team,
+		UnitType:      unitType,
 		X:             xPos,
 		Y:             yPos,
 		HealthPercent: 100,
@@ -50,6 +52,11 @@ func (p *Player) GetID() byte {
 // GetTeam ...
 func (p *Player) GetTeam() byte {
 	return p.Team
+}
+
+// GetUnitType ...
+func (p *Player) GetUnitType() byte {
+	return p.UnitType
 }
 
 // GetCollider ...

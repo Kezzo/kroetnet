@@ -6,6 +6,7 @@ import "kroetnet/collision"
 type NPCUnit struct {
 	ID            byte
 	Team          byte
+	UnitType      byte
 	X             int32
 	Y             int32
 	Rotation      byte
@@ -21,6 +22,11 @@ func (npc *NPCUnit) GetID() byte {
 // GetTeam ...
 func (npc *NPCUnit) GetTeam() byte {
 	return npc.Team
+}
+
+// GetUnitType ...
+func (npc *NPCUnit) GetUnitType() byte {
+	return npc.UnitType
 }
 
 // GetCollider ...
