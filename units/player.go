@@ -10,7 +10,7 @@ import (
 
 var xmax float64 = 24000
 var ymax float64 = 24000
-var unitSpeed float64 = 400
+var unitSpeed float64 = 250
 var colliderRadius int32 = 1000
 
 // Player details
