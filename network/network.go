@@ -70,9 +70,9 @@ func (n *Network) ListenUDP() {
 
 		num, addr, err := pc.ReadFrom(buf)
 
-		/*if buf[0] != 0 {
+		if buf[0] != 0 {
 			log.Println("Received buffer ", buf[:num], " from ", addr)
-		}*/
+		}
 
 		if err != nil {
 			log.Print("Error: ", err)

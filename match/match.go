@@ -71,8 +71,8 @@ func (m *Match) checkStateDuration() {
 	if m.State > 0 {
 		pingCounter := 0
 		for _, playerData := range m.players {
-			if (time.Now().Unix() - playerData.LastMsg.Unix()) > 5 {
-				log.Println("Player with following id timed out: ", playerData.ID)
+			if (time.Now().Unix() - playerData.LastPingTime.Unix()) > 5 {
+				log.Println("Player with following id timed out: ", playerData.ID, " current time: ", time.Now().Unix(), " last ping time: ", playerData.LastPingTime.Unix())
 				pingCounter++
 			}
 		}
@@ -285,7 +285,8 @@ func (m *Match) handleTimeSyncDone(pc net.PacketConn, addr net.Addr, buf []byte,
 func (m *Match) handlePing(pc net.PacketConn, addr net.Addr, buf []byte) {
 	for playerID, playerData := range m.players {
 		if playerData.IPAddr.String() == addr.String() {
-			m.players[playerID].LastMsg = time.Now()
+			m.players[playerID].LastPingTime = time.Now()
+			log.Println("Received ping msg from player:", playerID, " at time: ", time.Now().Unix())
 		}
 	}
 	pongMsg := msg.PongMsg{

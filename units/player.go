@@ -23,7 +23,7 @@ type Player struct {
 	HealthPercent int32
 	Collider      collision.Collider
 	IPAddr        net.Addr
-	LastMsg       time.Time
+	LastPingTime  time.Time
 }
 
 // EmptyPlayer ...
@@ -39,7 +39,7 @@ func NewPlayer(ID byte, team byte, xPos int32, yPos int32, ipAddr net.Addr) *Pla
 		Y:             yPos,
 		HealthPercent: 100,
 		Collider:      &collision.CircleCollider{Xpos: xPos, Ypos: yPos, Radius: colliderRadius},
-		LastMsg:       time.Now().Add(time.Second * 5)}
+		LastPingTime:  time.Now().Add(time.Second * 5)}
 }
 
 // GetID ...
