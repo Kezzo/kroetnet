@@ -387,7 +387,7 @@ func (m *Match) updateMatchState(pc net.PacketConn) {
 	}
 
 	for _, ai := range m.aiList {
-		ai.Tick(m.allUnits, updatedUnitIDs)
+		updatedUnitIDs = ai.Tick(m.allUnits, updatedUnitIDs)
 	}
 
 	// clear pending input msgs
