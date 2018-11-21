@@ -142,3 +142,7 @@ func getTranslation(xTranslation byte, yTranslation byte) (int32, int32) {
 
 	return int32(math.Round(unitSpeed * movX)), int32(math.Round(unitSpeed * movY))
 }
+
+// SetPosition dummy method for interface
+func (p *Player) SetPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte) {
+}

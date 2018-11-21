@@ -3,6 +3,7 @@ package match
 import (
 	"encoding/binary"
 	"kroetnet/abilities"
+	"kroetnet/ai"
 	"kroetnet/collision"
 	"kroetnet/msg"
 	"kroetnet/network"
@@ -19,6 +20,7 @@ type Match struct {
 	players                 []*units.Player
 	npcUnits                []*units.NPCUnit
 	allUnits                []units.Unit
+	aiList                  []ai.FireBoss
 	playerCount             int
 	State                   int
 	Frame                   byte
@@ -40,6 +42,7 @@ func NewMatch(playerCount, playerStateQueueCount int, port string) *Match {
 		players:                 make([]*units.Player, 0, playerCount),
 		npcUnits:                make([]*units.NPCUnit, 0, playerCount),
 		allUnits:                make([]units.Unit, 0, playerCount),
+		aiList:                  make([]ai.FireBoss, 0, 0),
 		playerCount:             playerCount,
 		playerStateQueue:        make([]Queue, playerStateQueueCount),
 		abilities:               make(map[byte]abilities.Ability),
@@ -295,6 +298,12 @@ func (m *Match) addInitialNPCUnits() {
 			HealthPercent: 100,
 			Collider:      &collision.CircleCollider{Xpos: x, Ypos: y, Radius: 1000}}
 
+		// if i == 1 {
+		var aiData ai.FireBoss
+		aiData.Init(npcUnitData)
+		m.aiList = append(m.aiList, aiData)
+		// }
+
 		m.npcUnits = append(m.npcUnits, npcUnitData)
 		m.allUnits = append(m.allUnits, npcUnitData)
 	}
@@ -375,6 +384,10 @@ func (m *Match) updateMatchState(pc net.PacketConn) {
 				m.processPendingAbilityInputMsg(pc, abilityinputmsg)
 			}
 		}
+	}
+
+	for _, ai := range m.aiList {
+		ai.Tick(m.allUnits, updatedUnitIDs)
 	}
 
 	// clear pending input msgs

@@ -13,4 +13,5 @@ type Unit interface {
 	AddDamage(damageToAdd int32)
 	GetHealthPercent() int32
 	IsPlayer() bool
+	SetPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte)
 }

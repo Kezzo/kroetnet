@@ -6,7 +6,7 @@ import (
 )
 
 func TestPlayerMove(t *testing.T) {
-	p := Player{0, 0, 0, 0, 8, 100, nil, nil, time.Now()}
+	p := Player{0, 0, 0, 0, 8, 100, 0, nil, nil, time.Now()}
 
 	x, y := GetPlayerPosition(p.X, p.Y, 255, 127)
 	if x != 250 {
@@ -19,7 +19,7 @@ func TestPlayerMove(t *testing.T) {
 	}
 }
 func TestPlayerMoveNegative(t *testing.T) {
-	p := Player{0, 0, 0, 0, 8, 100, nil, nil, time.Now()}
+	p := Player{0, 0, 0, 0, 8, 100, 0, nil, nil, time.Now()}
 
 	x, y := GetPlayerPosition(p.X, p.Y, 0, 127)
 	if x != -250 {

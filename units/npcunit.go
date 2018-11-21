@@ -1,6 +1,9 @@
 package units
 
-import "kroetnet/collision"
+import (
+	"kroetnet/collision"
+	"math"
+)
 
 // NPCUnit ...
 type NPCUnit struct {
@@ -64,4 +67,14 @@ func (npc *NPCUnit) GetHealthPercent() int32 {
 // IsPlayer ...
 func (npc *NPCUnit) IsPlayer() bool {
 	return false
+}
+
+// SetPosition ...
+func (npc *NPCUnit) SetPosition(xPos int32, yPos int32, xTranslation byte, yTranslation byte) {
+	resX, resY := xPos, yPos
+
+	movX, movY := getTranslation(xTranslation, yTranslation)
+
+	npc.X = int32(math.Min(xmax, math.Max(-xmax, float64(resX+movX))))
+	npc.Y = int32(math.Min(ymax, math.Max(-ymax, float64(resY+movY))))
 }
