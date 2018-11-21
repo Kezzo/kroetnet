@@ -2,7 +2,6 @@ package ai
 
 import (
 	"kroetnet/units"
-	"log"
 	"math"
 )
 
@@ -44,19 +43,21 @@ func (ai *FireBoss) Tick(units []units.Unit, updatedUnitIDs map[byte]bool) map[b
 			if unit.GetID() == ai.unitData.GetID() {
 				x, y := unit.GetPosition()
 				targetX, targetY := targetUnit.GetPosition()
-				transX, transY := byte(127), byte(127)
-				if targetX < x {
-					transX = 0
-				} else if targetX > x {
-					transX = 170
+				xDiff, yDiff := float64(x-targetX), float64(y-targetY)
+				xTrans, yTrans := 127, 127
+				// dont run inside of player ( most of the time )
+				if xDiff > 400 || xDiff < -400 && yDiff > 400 || yDiff < -400 {
+					if xDiff > 0 && yDiff > 0 {
+						xTrans, yTrans = 80, 80
+					} else if xDiff < 0 && yDiff < 0 {
+						xTrans, yTrans = 205, 205
+					} else if xDiff < 0 && yDiff > 0 {
+						xTrans, yTrans = 205, 80
+					} else if xDiff > 0 && yDiff < 0 {
+						xTrans, yTrans = 80, 205
+					}
 				}
-				if targetY < y {
-					transY = 0
-				} else if targetY > y {
-					transY = 170
-				}
-				log.Println("SET POS", transX, transY)
-				unit.SetPosition(x, y, transX, transY)
+				unit.SetPosition(x, y, byte(xTrans), byte(yTrans))
 			}
 		}
 		updatedUnitIDs[ai.unitData.GetID()] = true
