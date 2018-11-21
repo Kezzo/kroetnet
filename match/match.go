@@ -298,11 +298,11 @@ func (m *Match) addInitialNPCUnits() {
 			HealthPercent: 100,
 			Collider:      &collision.CircleCollider{Xpos: x, Ypos: y, Radius: 1000}}
 
-		// if i == 1 {
-		var aiData ai.FireBoss
-		aiData.Init(npcUnitData)
-		m.aiList = append(m.aiList, aiData)
-		// }
+		if i == 1 {
+			var aiData ai.FireBoss
+			aiData.Init(npcUnitData)
+			m.aiList = append(m.aiList, aiData)
+		}
 
 		m.npcUnits = append(m.npcUnits, npcUnitData)
 		m.allUnits = append(m.allUnits, npcUnitData)

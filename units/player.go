@@ -10,7 +10,9 @@ import (
 
 var xmax float64 = 24000
 var ymax float64 = 24000
-var unitSpeed float64 = 250
+
+// UnitSpeed for all units
+var UnitSpeed float64 = 250
 var colliderRadius int32 = 1000
 
 // Player details
@@ -140,7 +142,7 @@ func getTranslation(xTranslation byte, yTranslation byte) (int32, int32) {
 		}
 	}
 
-	return int32(math.Round(unitSpeed * movX)), int32(math.Round(unitSpeed * movY))
+	return int32(math.Round(UnitSpeed * movX)), int32(math.Round(UnitSpeed * movY))
 }
 
 // SetPosition dummy method for interface
