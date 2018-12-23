@@ -88,6 +88,17 @@ func (p *Player) AddDamage(damageToAdd int32) {
 	p.HealthPercent = newHealth
 }
 
+// AddHeal ...
+func (p *Player) AddHeal(healToAdd int32) {
+	newHealth := p.HealthPercent + healToAdd
+
+	if newHealth > 100 {
+		newHealth = 100
+	}
+
+	p.HealthPercent = newHealth
+}
+
 // GetHealthPercent ...
 func (p *Player) GetHealthPercent() int32 {
 	return p.HealthPercent

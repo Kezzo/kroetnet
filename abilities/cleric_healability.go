@@ -8,21 +8,21 @@ import (
 	"math"
 )
 
-// WarriorMeeleAbility ..
-type WarriorMeeleAbility struct {
+// ClericHealAbility ..
+type ClericHealAbility struct {
 	data      AbilityData
 	triggered bool
 	caster    units.Unit
 }
 
-var meeleActivationDelay = byte(10)
-var meeleDuration = byte(0)
-var meeleColliderLength int32 = 4000
-var meeleColliderWidthDegress float64 = 45
+var healActivationDelay = byte(20)
+var healDuration = byte(0)
+var healColliderLength int32 = 8000
+var healColliderWidthDegress float64 = 35
 
 // Init ...
-func (a *WarriorMeeleAbility) Init(data AbilityData, caster units.Unit) AbilityData {
-	data.ActivationFrame = byte(math.Mod(float64(data.StartFrame+meeleActivationDelay), 255.))
+func (a *ClericHealAbility) Init(data AbilityData, caster units.Unit) AbilityData {
+	data.ActivationFrame = byte(math.Mod(float64(data.StartFrame+healActivationDelay), 255.))
 	data.EndFrame = data.ActivationFrame
 	a.data = data
 	a.caster = caster
@@ -33,23 +33,23 @@ func (a *WarriorMeeleAbility) Init(data AbilityData, caster units.Unit) AbilityD
 }
 
 // Tick ...
-func (a *WarriorMeeleAbility) Tick(units []units.Unit, frame byte, updatedUnitIDs map[byte]bool) map[byte]bool {
+func (a *ClericHealAbility) Tick(units []units.Unit, frame byte, updatedUnitIDs map[byte]bool) map[byte]bool {
 	if !a.triggered && utility.IsFrameNowOrInPast(a.data.ActivationFrame, frame) {
 		//log.Println("Did trigger at: ", frame, " ActivationFrame: ", a.data.ActivationFrame)
 
 		x, y := a.caster.GetPosition()
-		abilityCollider := collision.NewConeCollider(x, y, a.data.Rotation, meeleColliderLength, meeleColliderWidthDegress)
+		abilityCollider := collision.NewConeCollider(x, y, a.data.Rotation, healColliderLength, healColliderWidthDegress)
 
 		for _, unitData := range units {
-			// TODO: Allow targeting team members (i.e. mfor heals)
-			if a.caster.GetTeam() == unitData.GetTeam() {
+			// don't heal enemies
+			if a.caster.GetTeam() != unitData.GetTeam() {
 				continue
 			}
 
 			if abilityCollider.IsColliding(unitData.GetCollider()) {
-				log.Println("WarriorMeeleAbility collided with unit of team: ", unitData.GetTeam())
+				log.Println("ClericHealAbility collided with unit of team: ", unitData.GetTeam())
 
-				unitData.AddDamage(30)
+				unitData.AddHeal(50)
 				updatedUnitIDs[unitData.GetID()] = true
 			}
 		}
@@ -63,6 +63,6 @@ func (a *WarriorMeeleAbility) Tick(units []units.Unit, frame byte, updatedUnitID
 }
 
 // IsActive ...
-func (a *WarriorMeeleAbility) IsActive(currentFrame byte) bool {
+func (a *ClericHealAbility) IsActive(currentFrame byte) bool {
 	return utility.IsFrameInFuture(a.data.EndFrame, currentFrame)
 }

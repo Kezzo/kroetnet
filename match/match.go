@@ -555,11 +555,13 @@ func (m *Match) processPendingAbilityInputMsg(pc net.PacketConn, inputmsg msg.Ab
 	}
 
 	// make this better
-	// TODO: Check if player can use the abiity id
+	// TODO: Check if player can use the ability id
 
 	switch inputmsg.AbilityID {
 	case 0:
 		m.abilities[inputmsg.PlayerID] = &abilities.WarriorMeeleAbility{}
+	case 1:
+		m.abilities[inputmsg.PlayerID] = &abilities.ClericHealAbility{}
 	}
 
 	var abilityData = abilities.AbilityData{
