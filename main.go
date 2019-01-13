@@ -22,17 +22,16 @@ func httpServer(c chan int) {
 }
 
 func main() {
-	c := make(chan int, 1)
-	playerCount := 0
-	go httpServer(c)
-	for v := range c {
-		playerCount = v
-		break
-	}
+	// c := make(chan int, 1)
+	playerCount := 1
+	// go httpServer(c)
+	// for v := range c {
+	//   playerCount = v
+	//   break
+	// }
 	// main goroutine
 	fmt.Println("Start match with playerCount:", playerCount)
 	port := ":2448"
 	match := match.NewMatch(playerCount, 15, port)
 	match.StartServer()
-
 }
